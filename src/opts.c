@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "opts.h"
 #include "lib/cjson/cJSON.h"
@@ -47,13 +48,15 @@ opts_t *read_opts_json(char* json_buf)
     size_t  iterator_idx;
     cJSON*  iterator;
     
+    cJSON*  hook_entry;
     cJSON*  acc;
 
     opts_t* result;
     
     #define parsing_error(err, ...) \
+        do { \
         fprintf(stderr, "An error occurred parsing JSON: " err, ##__VA_ARGS__); \
-        exit(1);
+        exit(1); } while(0);
 
     if ( (parsed = cJSON_Parse(json_buf)) == NULL)
     {
@@ -148,6 +151,10 @@ opts_t *read_opts_json(char* json_buf)
             size_t key_length   = strlen(iterator->string), 
                    value_length = strlen(acc->valuestring);
             
+            /* Sanity check */
+            if(strstr(iterator->string, "="))
+                parsing_error("\"env\": key contains '='.\n");
+        
             /* key length + length of '=' (1) + value length + length of '\0' (1) */
             result->target_executable.envp[iterator_idx] = malloc(key_length + value_length + 2);
 
@@ -167,7 +174,7 @@ opts_t *read_opts_json(char* json_buf)
     }
     
 
-    acc = cJSON_GetObjectItemCaseSensitive(target, "to_inject");
+    acc = cJSON_GetObjectItemCaseSensitive(parsed, "to_inject");
 
     if(!cJSON_IsString(acc))
     {
@@ -176,6 +183,71 @@ opts_t *read_opts_json(char* json_buf)
     
     result->to_inject_path = strdup(acc->valuestring);
     
+    acc = cJSON_GetObjectItemCaseSensitive(parsed, "hooks");
+
+    if(!acc)
+    {
+        result->hooks = NULL;
+    }
+
+    else if(cJSON_IsArray(acc))
+    {
+
+        hook_target_t *hook;
+        result->hooks = NULL;
+        iterator_idx = 0;
+
+        cJSON_ArrayForEach(iterator, acc)
+        {
+            bool is_string;
+            size_t offset_value;
+
+            if(!cJSON_IsObject(iterator))
+            {
+                parsing_error("\"hooks\": element `%lu` not [object].\n", iterator_idx);
+            }
+
+            hook = calloc(1, sizeof *result->hooks);
+            
+            #define json_parse_generic_offset(DEST, ENTRY, IDX) \
+                do { \
+                    is_string = cJSON_IsString(ENTRY); \
+                    if(!is_string && !cJSON_IsNumber(ENTRY)) \
+                        parsing_error("\"hooks\", element `%lu`: \"%s\" either missing or not [string, number].\n", IDX, (ENTRY)->string); \
+                    if(is_string) \
+                    { \
+                        if(!strncmp( (ENTRY)->valuestring, "0x", 2)) \
+                        { \
+                            is_string = false; \
+                            offset_value = strtoll(&(ENTRY)->valuestring[2], NULL, 16); \
+                        } \
+                        else \
+                           offset_value = (size_t)((ENTRY)->valuestring); \
+                    } \
+                    else \
+                        offset_value = (size_t) ((ENTRY)->valueint); \
+                    (DEST)->type = is_string ? OFFSET_SYMBOL : OFFSET_RAW; \
+                    (DEST)->raw  = is_string ? (size_t)strdup((char*)offset_value) : offset_value; \
+                } while(0);
+
+            hook_entry = cJSON_GetObjectItemCaseSensitive(iterator, "target_offset");
+            json_parse_generic_offset(&hook->target_offset, hook_entry, iterator_idx);
+
+            hook_entry = cJSON_GetObjectItemCaseSensitive(iterator, "hook_offset");
+            json_parse_generic_offset(&hook->hook_offset, hook_entry, iterator_idx);
+
+            hook->next = result->hooks;
+            result->hooks = hook;
+            iterator_idx++;
+        }
+        
+    }
+
+    else
+    {
+        parsing_error("\"hooks\": not [array].\n")
+    }
+
     cJSON_Delete(parsed);
 
     print_opts(result);
@@ -185,9 +257,36 @@ opts_t *read_opts_json(char* json_buf)
 }
 
 
+static void print_generic_offset(generic_offset_t *offset)
+{
+    switch(offset->type)
+    {
+        case OFFSET_RAW:
+            printf("%p", (void*)offset->raw);
+            break;
+        case OFFSET_SYMBOL:
+            printf("%s", offset->symbol);
+            break;
+        default:
+            printf("<NONE>");
+            break;
+    }
+}
+
+static void print_hook_target(hook_target_t *hook)
+{
+    printf("TARGET + ");
+    print_generic_offset(&hook->target_offset);
+    printf(" -------> ");
+    printf("LIB + ");
+    print_generic_offset(&hook->hook_offset);
+    putchar('\n');
+}
+
 static void print_opts(opts_t *opts)
 {
     size_t i;
+    hook_target_t *hook;
 
     puts("<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>");
 
@@ -210,6 +309,18 @@ static void print_opts(opts_t *opts)
     putchar('\n');
 
     printf("lib to inject: \"%s\"\n", opts->to_inject_path ? opts->to_inject_path : "NONE");
+    
+    hook = opts->hooks;
+    
+    if(hook)
+        printf("hooks:\n");
+
+    while(hook)
+    {
+        putchar('\t');
+        print_hook_target(hook);
+        hook = hook->next;
+    }
 
     puts("<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>");
 }

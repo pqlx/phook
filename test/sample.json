@@ -4,7 +4,16 @@
         "env": {
             "A": "B",
             "KEY": "VAL"
-        },
-        "to_inject": "/path/to/lib.so"
-    }
+        }
+    },
+    "to_inject": "/path/to/lib.so",
+    "hooks": [
+        
+        {
+            "target_offset": "0x1234",
+            "hook_offset": "do_hook"
+        }
+
+    ]
+
 }

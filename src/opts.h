@@ -19,7 +19,9 @@ typedef struct hook_target {
     generic_offset_t target_offset;
 
     /* Offset in the library */
-    generic_offset_t hook_lib_offset;
+    generic_offset_t hook_offset;
+    
+    struct hook_target *next;
 
 } hook_target_t;
 
@@ -41,7 +43,6 @@ typedef struct opts {
 
     /* Hooks, tells us which functions we should redirect to where */
     hook_target_t *hooks;
-    size_t n_hooks;
 
 } opts_t;
 

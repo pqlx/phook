@@ -26,5 +26,7 @@ int main(int argc, char** argv)
 
     config_file = argv[2];
 
-    opts_t *opts = read_opts_file(config_file);
+    read_opts_file(config_file);
+    return 0;
+
 }

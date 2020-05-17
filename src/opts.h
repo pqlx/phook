@@ -30,9 +30,9 @@ typedef struct opts {
 
     /* The environment under which to run our target */
     struct {
-        char* path;
-        char** argv;
-        char** envp;
+        char* path;      /* path - will always be set */
+        char** argv;     /* argv - will NOT always be set */
+        char** envp;     /* envp - will NOT always be set */
     } target_executable;
 
     /* Path of the library we will inject; 

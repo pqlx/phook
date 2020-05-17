@@ -1,6 +1,9 @@
 {
     "target_executable": {
         "exec": ["/bin/sh"],
-        "env" : {}
+        "env": {
+            "A": "B",
+            "KEY": "VAL"
+        }
     }
 }

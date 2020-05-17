@@ -5,6 +5,7 @@
 #include "opts.h"
 #include "lib/cjson/cJSON.h"
 
+static void print_opts(opts_t*);
 
 opts_t *read_opts_file(char* filename)
 {
@@ -130,7 +131,9 @@ opts_t *read_opts_json(char* json_buf)
         cJSON_ArrayForEach(iterator, env)
         {
             /* Iterator is guaranteed to be a string */
-            acc = cJSON_GetObjectItemCaseSensitive(iterator, iterator->valuestring);
+            
+            printf("iterator->valuestring = \"%s\"\n", iterator->string);
+            acc = cJSON_GetObjectItemCaseSensitive(env, iterator->string);
             
             if(!cJSON_IsString(acc))
             {
@@ -141,13 +144,13 @@ opts_t *read_opts_json(char* json_buf)
              * "KEY=VALUE"
              * We'll paste the two together with a '=' */
             
-            size_t key_length   = strlen(iterator->valuestring), 
+            size_t key_length   = strlen(iterator->string), 
                    value_length = strlen(acc->valuestring);
             
             /* key length + length of '=' (1) + value length + length of '\0' (1) */
             result->target_executable.envp[iterator_idx] = malloc(key_length + value_length + 2);
 
-            strcpy(result->target_executable.envp[iterator_idx], iterator->valuestring);
+            strcpy(result->target_executable.envp[iterator_idx], iterator->string);
             result->target_executable.envp[iterator_idx][key_length] = '=';
             strcpy(&result->target_executable.envp[iterator_idx][key_length + 1], acc->valuestring);
             
@@ -163,9 +166,36 @@ opts_t *read_opts_json(char* json_buf)
     }
 
     
-    cJSON_Delete(parsed);    
+    cJSON_Delete(parsed);
+
+    print_opts(result);
     return result;
 
     #undef parse_error
 }
 
+
+static void print_opts(opts_t *opts)
+{
+    size_t i;
+
+    puts("<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>");
+
+    printf("target path:  \"%s\"\n", opts->target_executable.path);
+    printf("argv:\n");
+    
+    i = 0;
+    if(opts->target_executable.argv)
+        while(opts->target_executable.argv[i])
+            printf("\t\"%s\"\n", opts->target_executable.argv[i++]);
+    
+
+    printf("envp:\n");
+    i = 0;
+
+    if(opts->target_executable.envp)
+        while(opts->target_executable.envp[i])
+            printf("\t\"%s\"\n", opts->target_executable.envp[i++]);
+
+    puts("<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>");
+}

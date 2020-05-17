@@ -1,3 +1,5 @@
+#pragma once
+
 typedef struct generic_offset {
     
     enum {

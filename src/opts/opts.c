@@ -5,35 +5,19 @@
 
 #include "opts.h"
 #include "../lib/cjson/cJSON.h"
+#include "../util/util.h"
 
 static void print_opts(opts_t*);
 
 opts_t *read_opts_file(char* filename)
 {
-    size_t  file_len;
-    FILE*   handle;
-    opts_t* result;
+    char* json;
+    opts_t *result;
+ 
+    json = read_text_file(filename);
+    result = read_opts_json(json);
 
-    if( (handle = fopen(filename, "r")) == NULL)
-    {
-        perror("fopen");
-        exit(1);
-    }
-    
-    setvbuf(handle, NULL, _IONBF, 0);
-    
-    fseek(handle, 0, SEEK_END);
-    file_len = ftello(handle);
-    
-    rewind(handle);
-
-    char *contents = malloc(file_len + 1);
-
-    contents[ fread(contents, 1, file_len, handle) ] = '\x00';
-    result = read_opts_json(contents);
-
-    free(contents);
-    fclose(handle); 
+    free(json);
 
     return result;
 }

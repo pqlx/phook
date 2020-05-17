@@ -41,11 +41,12 @@ opts_t *read_opts_json(char* json_buf)
     cJSON*  parsed;
     cJSON*  target;
     cJSON*  exec_list;
-    cJSON*  acc;
     cJSON*  env;
 
     size_t  iterator_idx;
     cJSON*  iterator;
+    
+    cJSON*  acc;
 
     opts_t* result;
     
@@ -132,7 +133,6 @@ opts_t *read_opts_json(char* json_buf)
         {
             /* Iterator is guaranteed to be a string */
             
-            printf("iterator->valuestring = \"%s\"\n", iterator->string);
             acc = cJSON_GetObjectItemCaseSensitive(env, iterator->string);
             
             if(!cJSON_IsString(acc))
@@ -164,7 +164,16 @@ opts_t *read_opts_json(char* json_buf)
     {
         parsing_error("\"env\": not [object]\n");
     }
+    
 
+    acc = cJSON_GetObjectItemCaseSensitive(target, "to_inject");
+
+    if(!cJSON_IsString(acc))
+    {
+        parsing_error("\"to_inject\": either missing or not [string]\n");
+    }
+    
+    result->to_inject_path = strdup(acc->valuestring);
     
     cJSON_Delete(parsed);
 
@@ -196,6 +205,10 @@ static void print_opts(opts_t *opts)
     if(opts->target_executable.envp)
         while(opts->target_executable.envp[i])
             printf("\t\"%s\"\n", opts->target_executable.envp[i++]);
+    
+    putchar('\n');
+
+    printf("lib to inject: \"%s\"\n", opts->to_inject_path ? opts->to_inject_path : "NONE");
 
     puts("<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>");
 }

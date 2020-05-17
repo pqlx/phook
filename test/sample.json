@@ -4,6 +4,7 @@
         "env": {
             "A": "B",
             "KEY": "VAL"
-        }
+        },
+        "to_inject": "/path/to/lib.so"
     }
 }

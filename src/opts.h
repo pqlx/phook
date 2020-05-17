@@ -37,7 +37,7 @@ typedef struct opts {
 
     /* Path of the library we will inject; 
      * This will contain all our hooks */
-    char* hooking_lib_path;
+    char* to_inject_path;
 
     /* Hooks, tells us which functions we should redirect to where */
     hook_target_t *hooks;

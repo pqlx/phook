@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <libgen.h>
 
 #include "opts.h"
 #include "../lib/cjson/cJSON.h"
@@ -287,12 +288,12 @@ static void print_generic_offset(generic_offset_t *offset)
     }
 }
 
-static void print_hook_target(hook_target_t *hook)
+static void print_hook_target(hook_target_t *hook, char* target_file, char* lib_file)
 {
-    printf("TARGET + ");
+    printf("%s+", target_file);
     print_generic_offset(&hook->target_offset);
     printf(" -------> ");
-    printf("LIB + ");
+    printf("%s+", lib_file);
     print_generic_offset(&hook->hook_offset);
     putchar('\n');
 }
@@ -332,7 +333,7 @@ static void print_opts(opts_t *opts)
     while(hook)
     {
         putchar('\t');
-        print_hook_target(hook);
+        print_hook_target(hook, basename(opts->target_executable.path), basename(opts->to_inject_path) );
         hook = hook->next;
     }
 

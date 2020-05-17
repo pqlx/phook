@@ -239,8 +239,9 @@ opts_t *read_opts_json(char* json_buf)
             hook->next = result->hooks;
             result->hooks = hook;
             iterator_idx++;
+
+            #undef json_parse_generic_offset
         }
-        
     }
 
     else
@@ -254,6 +255,35 @@ opts_t *read_opts_json(char* json_buf)
     return result;
 
     #undef parse_error
+}
+
+
+void free_opts(opts_t* opts)
+{
+    free(opts->target_executable.path);
+    
+    #define maybe_free_string_array(array) \
+        do { \
+        if( (array) ) \
+            while( *(array) ) free( *(array++)); \
+        free(array); \
+        array = NULL; } while(0);
+                    
+    maybe_free_string_array(opts->target_executable.argv);
+    maybe_free_string_array(opts->target_executable.envp);
+
+    #undef maybe_free_string_array
+    
+    free(opts->to_inject_path);
+    
+
+    hook_target_t *current = opts->hooks, *next;
+    while(current)
+    {
+        next = current->next;
+        free(current);
+        current = next;
+    }
 }
 
 

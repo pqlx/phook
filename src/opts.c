@@ -32,7 +32,8 @@ opts_t *read_opts_file(char* filename)
     result = read_opts_json(contents);
 
     free(contents);
-    
+    fclose(handle); 
+
     return result;
 }
 

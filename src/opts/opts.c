@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #include "opts.h"
-#include "lib/cjson/cJSON.h"
+#include "../lib/cjson/cJSON.h"
 
 static void print_opts(opts_t*);
 

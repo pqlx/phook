@@ -100,7 +100,7 @@ opts_t *read_opts_json(char* json_buf)
         
         if(iterator_idx == 0)
         {
-            parsing_error("\"exec\": empty array.");
+            parsing_error("\"exec\": empty array.\n");
         }
         
         result->target_executable.argv[iterator_idx] = NULL;
@@ -159,7 +159,7 @@ opts_t *read_opts_json(char* json_buf)
 
     else
     {
-        parsing_error("\"env\": not [object]");
+        parsing_error("\"env\": not [object]\n");
     }
 
     

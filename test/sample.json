@@ -1,0 +1,6 @@
+{
+    "target_executable": {
+        "exec": ["/bin/sh"],
+        "env" : {}
+    }
+}

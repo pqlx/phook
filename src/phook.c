@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "opts/opts.h"
-
+#include "elf/symbols.h"
 
 
 void usage(void)
@@ -27,6 +27,13 @@ int main(int argc, char** argv)
     config_file = argv[2];
 
     read_opts_file(config_file);
+    
+    func_symbol_t *symbols;
+    
+    symbols = elf_read_func_symbols("./phook"); 
+    func_symbol_t *main_symbol = resolve_func_symbol_byid(symbols, "main"); 
+    print_func_symbol(main_symbol);
+    
     return 0;
 
 }

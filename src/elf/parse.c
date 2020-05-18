@@ -19,6 +19,7 @@ elf_file_t* elf_file_fill(char* path)
     {
         free(result);
         perror("realpath");
+        printf("File: %s\n", path);
         return NULL;
     }
     

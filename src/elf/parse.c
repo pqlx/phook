@@ -8,20 +8,23 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "symbols.h"
+#include "parse.h"
 
-func_symbol_t* elf_read_func_symbols_fd(int fd)
+proc_elf_t* elf_process_fd(int fd)
 {
     /* Support reading from a raw fd directly.
      * This way we can have a single handle, 
      * Instead of having to reopen the file, we can just lseek 
      * */
 
+
     Elf       *elf;
     Elf_Scn   *section = NULL;
     GElf_Shdr section_header;
     bool      found;
-    func_symbol_t  *result;
+    
+    proc_elf_t* result;
+   
 
     elf_version(EV_CURRENT);
 
@@ -53,9 +56,10 @@ func_symbol_t* elf_read_func_symbols_fd(int fd)
     /* Fetch the symbol section we found earlier */ 
     data = elf_getdata(section, NULL);
     n_entries = section_header.sh_size / section_header.sh_entsize;
-    
+   
+
+    result = calloc(1, sizeof *result); 
     func_symbol_t *current;
-    result = NULL;
     for(int i = 0; i < n_entries; ++i)
     {
         GElf_Sym symbol;
@@ -74,8 +78,8 @@ func_symbol_t* elf_read_func_symbols_fd(int fd)
                      );
              
              current->value = symbol.st_value;
-             current->next = result;
-             result = current;
+             current->next = result->func_symbols;
+             result->func_symbols = current;
         }
     }
     
@@ -85,7 +89,7 @@ func_symbol_t* elf_read_func_symbols_fd(int fd)
     return result;
 }
 
-func_symbol_t* elf_read_func_symbols_file(char* filename)
+proc_elf_t* elf_process_file(char* filename)
 {
     /*
      * Higher level interface to elf_read_func_symbols_fd
@@ -93,15 +97,15 @@ func_symbol_t* elf_read_func_symbols_file(char* filename)
      * */
 
     int fd;
-    func_symbol_t* results;
+    proc_elf_t* results;
     if( (fd = open(filename, O_RDONLY)) < 0)
     {
         perror("open");
         return NULL;
     }
 
-    if( (results = elf_read_func_symbols_fd(fd)) == NULL)
-        perror("elf_read_func_symbols_fd");
+    if( (results = elf_process_fd(fd)) == NULL)
+        perror("elf_process_fd");
     
     close(fd);
 

@@ -17,6 +17,10 @@ typedef struct func_symbol {
 
 typedef struct proc_elf {
     func_symbol_t* func_symbols;
+    enum linkage {
+        LINK_STATIC =  0x00,
+        LINK_DYNAMIC = 0x01       
+    } link_type;
 } proc_elf_t;
 
 

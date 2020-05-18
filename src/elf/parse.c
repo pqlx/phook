@@ -23,9 +23,8 @@ proc_elf_t* elf_process_fd(int fd)
     GElf_Shdr section_header;
     bool      found;
     
-    proc_elf_t* result;
+    proc_elf_t* result = NULL;
    
-
     elf_version(EV_CURRENT);
 
     if ( (elf = elf_begin(fd, ELF_C_READ, NULL)) == NULL)
@@ -49,7 +48,7 @@ proc_elf_t* elf_process_fd(int fd)
     if(!found)
         goto end;
     
-    
+  
     Elf_Data *data;
     size_t n_entries;
     
@@ -83,6 +82,26 @@ proc_elf_t* elf_process_fd(int fd)
         }
     }
     
+   
+     
+    GElf_Phdr program_header;
+    size_t phdrnum;
+    
+    elf_getphdrnum(elf, &phdrnum);
+    
+    result->link_type = LINK_STATIC;
+    for(size_t i = 0; i < phdrnum; ++i)
+    {
+        gelf_getphdr(elf, i, &program_header);
+
+        if(program_header.p_type == PT_INTERP)
+        {
+            result->link_type = LINK_DYNAMIC;
+            break;
+        }
+            
+    }
+
     end:
     elf_end(elf);
 

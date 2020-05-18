@@ -33,6 +33,8 @@ int main(int argc, char** argv)
     func_symbol_t *main_symbol = resolve_func_symbol_byid(elf->func_symbols, "main"); 
     print_func_symbol(main_symbol);
     
+    printf("linkage type: %d\n", elf->link_type);
+
     return 0;
 
 }

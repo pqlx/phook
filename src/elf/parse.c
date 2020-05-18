@@ -10,7 +10,25 @@
 
 #include "parse.h"
 
-proc_elf_t* elf_process_fd(int fd)
+elf_file_t* elf_file_fill(char* path)
+{
+    elf_file_t* result;
+    result = calloc(1, sizeof *result);
+
+    if( (result->path = realpath(path, NULL)) == NULL)
+    {
+        free(result);
+        perror("realpath");
+        return NULL;
+    }
+    
+    
+    result->info = elf_process_file(result->path);
+
+    return result;
+}
+
+elf_info_t* elf_process_fd(int fd)
 {
     /* Support reading from a raw fd directly.
      * This way we can have a single handle, 
@@ -23,13 +41,13 @@ proc_elf_t* elf_process_fd(int fd)
     GElf_Shdr section_header;
     bool      found;
     
-    proc_elf_t* result = NULL;
+    elf_info_t* result = NULL;
    
     elf_version(EV_CURRENT);
 
     if ( (elf = elf_begin(fd, ELF_C_READ, NULL)) == NULL)
     {
-        perror("elf_begin");
+        fprintf(stderr, "elf_begin failed: %s", elf_errmsg(-1));
         return NULL;   
     }
     
@@ -44,49 +62,49 @@ proc_elf_t* elf_process_fd(int fd)
             break;
         }
     }
+    
 
-    if(!found)
-        goto end;
-    
-  
-    Elf_Data *data;
-    size_t n_entries;
-    
-    /* Fetch the symbol section we found earlier */ 
-    data = elf_getdata(section, NULL);
-    n_entries = section_header.sh_size / section_header.sh_entsize;
-   
 
     result = calloc(1, sizeof *result); 
-    func_symbol_t *current;
-    for(int i = 0; i < n_entries; ++i)
-    {
-        GElf_Sym symbol;
-        gelf_getsym(data, i, &symbol);
-        
-        /* Check if the current symbol is 1. a function and 2. not a relocation,
-         * i.e the code is not just a procedure linkage table stub 
-         * */
-        if( ELF64_ST_TYPE(symbol.st_info) == STT_FUNC && symbol.st_value != 0)
+    if(found)
+    { 
+  
+        Elf_Data *data;
+        size_t n_entries;
+    
+        /* Fetch the symbol section we found earlier */ 
+        data = elf_getdata(section, NULL);
+        n_entries = section_header.sh_size / section_header.sh_entsize;
+   
+
+        func_symbol_t *current;
+        for(int i = 0; i < n_entries; ++i)
         {
-             current = calloc(1, sizeof *current);
+            GElf_Sym symbol;
+            gelf_getsym(data, i, &symbol);
+        
+            /* Check if the current symbol is 1. a function and 2. not a relocation,
+            * i.e the code is not just a procedure linkage table stub 
+            * */
+            if( ELF64_ST_TYPE(symbol.st_info) == STT_FUNC && symbol.st_value != 0)
+            {
+                current = calloc(1, sizeof *current);
              
-             /* Make a copy of the string in the symbol table */
-             current->identifier = strdup( 
+                /* Make a copy of the string in the symbol table */
+                current->identifier = strdup( 
                      elf_strptr(elf, section_header.sh_link, symbol.st_name)
                      );
              
-             current->value = symbol.st_value;
-             current->next = result->func_symbols;
-             result->func_symbols = current;
+                current->value = symbol.st_value;
+                current->next = result->func_symbols;
+                result->func_symbols = current;
+            }
         }
     }
-    
    
-     
     GElf_Phdr program_header;
     size_t phdrnum;
-    
+     
     elf_getphdrnum(elf, &phdrnum);
     
     result->link_type = LINK_STATIC;
@@ -102,13 +120,13 @@ proc_elf_t* elf_process_fd(int fd)
             
     }
 
-    end:
+    
     elf_end(elf);
 
     return result;
 }
 
-proc_elf_t* elf_process_file(char* filename)
+elf_info_t* elf_process_file(char* filename)
 {
     /*
      * Higher level interface to elf_read_func_symbols_fd
@@ -116,7 +134,7 @@ proc_elf_t* elf_process_file(char* filename)
      * */
 
     int fd;
-    proc_elf_t* results;
+    elf_info_t* results;
     if( (fd = open(filename, O_RDONLY)) < 0)
     {
         perror("open");
@@ -124,7 +142,10 @@ proc_elf_t* elf_process_file(char* filename)
     }
 
     if( (results = elf_process_fd(fd)) == NULL)
-        perror("elf_process_fd");
+    {
+        printf("parsing \"%s\" failed.\n", filename);
+        return NULL;
+    }
     
     close(fd);
 

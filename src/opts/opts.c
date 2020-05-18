@@ -277,7 +277,7 @@ static void print_generic_offset(generic_offset_t *offset)
     switch(offset->type)
     {
         case OFFSET_RAW:
-            printf("%p", (void*)offset->raw);
+            printf("0x%.8lx", offset->raw);
             break;
         case OFFSET_SYMBOL:
             printf("%s", offset->symbol);

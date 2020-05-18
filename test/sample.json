@@ -1,12 +1,12 @@
 {
     "target_executable": {
-        "exec": ["/bin/sh"],
+        "exec": ["test/build/target_dynamic"],
         "env": {
             "A": "B",
             "KEY": "VAL"
         }
     },
-    "to_inject": "/path/to/lib.so",
+    "to_inject": "test/build/inject.so",
     "hooks": [
         
         {

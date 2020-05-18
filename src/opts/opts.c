@@ -23,6 +23,27 @@ opts_t *read_opts_file(char* filename)
     return result;
 }
 
+#define json_parse_generic_offset(DEST, ENTRY, IDX) \
+    do { \
+        is_string = cJSON_IsString(ENTRY); \
+        if(!is_string && !cJSON_IsNumber(ENTRY)) \
+        parsing_error("\"hooks\", element `%lu`: \"%s\" either missing or not [string, number].\n", IDX, (ENTRY)->string); \
+        if(is_string) \
+        { \
+            if(!strncmp( (ENTRY)->valuestring, "0x", 2)) \
+            { \
+                is_string = false; \
+                offset_value = strtoll(&(ENTRY)->valuestring[2], NULL, 16); \
+            } \
+            else \
+            offset_value = (size_t)((ENTRY)->valuestring); \
+        } \
+        else \
+        offset_value = (size_t) ((ENTRY)->valueint); \
+        (DEST)->type = is_string ? OFFSET_SYMBOL : OFFSET_RAW; \
+        (DEST)->raw  = is_string ? (size_t)strdup((char*)offset_value) : offset_value; \
+    } while(0);
+
 opts_t *read_opts_json(char* json_buf)
 {
     cJSON*  parsed;
@@ -35,9 +56,11 @@ opts_t *read_opts_json(char* json_buf)
     
     cJSON*  hook_entry;
     cJSON*  acc;
+    
+    bool is_string;
 
     opts_t* result;
-    
+     
     #define parsing_error(err, ...) \
         do { \
         fprintf(stderr, "An error occurred parsing JSON: " err, ##__VA_ARGS__); \
@@ -184,7 +207,6 @@ opts_t *read_opts_json(char* json_buf)
 
         cJSON_ArrayForEach(iterator, acc)
         {
-            bool is_string;
             size_t offset_value;
 
             if(!cJSON_IsObject(iterator))
@@ -194,26 +216,6 @@ opts_t *read_opts_json(char* json_buf)
 
             hook = calloc(1, sizeof *result->hooks);
             
-            #define json_parse_generic_offset(DEST, ENTRY, IDX) \
-                do { \
-                    is_string = cJSON_IsString(ENTRY); \
-                    if(!is_string && !cJSON_IsNumber(ENTRY)) \
-                        parsing_error("\"hooks\", element `%lu`: \"%s\" either missing or not [string, number].\n", IDX, (ENTRY)->string); \
-                    if(is_string) \
-                    { \
-                        if(!strncmp( (ENTRY)->valuestring, "0x", 2)) \
-                        { \
-                            is_string = false; \
-                            offset_value = strtoll(&(ENTRY)->valuestring[2], NULL, 16); \
-                        } \
-                        else \
-                           offset_value = (size_t)((ENTRY)->valuestring); \
-                    } \
-                    else \
-                        offset_value = (size_t) ((ENTRY)->valueint); \
-                    (DEST)->type = is_string ? OFFSET_SYMBOL : OFFSET_RAW; \
-                    (DEST)->raw  = is_string ? (size_t)strdup((char*)offset_value) : offset_value; \
-                } while(0);
 
             hook_entry = cJSON_GetObjectItemCaseSensitive(iterator, "target_offset");
             json_parse_generic_offset(&hook->target_offset, hook_entry, iterator_idx);

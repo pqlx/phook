@@ -11,7 +11,8 @@ typedef struct func_symbol {
 } func_symbol_t;
 
 
-func_symbol_t *elf_read_func_symbols(char*);
+func_symbol_t *elf_read_func_symbols_file(char*);
+func_symbol_t *elf_read_func_symbols_fd(int);
 
 void print_func_symbol(const func_symbol_t*);
 void print_func_symbols(const func_symbol_t*);

@@ -10,22 +10,26 @@
 
 #include "symbols.h"
 
-func_symbol_t* elf_read_func_symbols(char* filename)
+func_symbol_t* elf_read_func_symbols_fd(int fd)
 {
+    /* Support reading from a raw fd directly.
+     * This way we can have a single handle, 
+     * Instead of having to reopen the file, we can just lseek 
+     * */
+
     Elf       *elf;
     Elf_Scn   *section = NULL;
     GElf_Shdr section_header;
-    int       fd;
     bool      found;
     func_symbol_t  *result;
 
-    
-
     elf_version(EV_CURRENT);
 
-    fd = open(filename, O_RDONLY);
-    
-    elf = elf_begin(fd, ELF_C_READ, NULL);
+    if ( (elf = elf_begin(fd, ELF_C_READ, NULL)) == NULL)
+    {
+        perror("elf_begin");
+        return NULL;   
+    }
     
     /* Loop over sections until a symbol section is found */
     found  = false;
@@ -77,9 +81,32 @@ func_symbol_t* elf_read_func_symbols(char* filename)
     
     end:
     elf_end(elf);
-    close(fd);
 
     return result;
+}
+
+func_symbol_t* elf_read_func_symbols_file(char* filename)
+{
+    /*
+     * Higher level interface to elf_read_func_symbols_fd
+     * Use this if you don't need to keep a handle to the ELF.
+     * */
+
+    int fd;
+    func_symbol_t* results;
+    if( (fd = open(filename, O_RDONLY)) < 0)
+    {
+        perror("open");
+        return NULL;
+    }
+
+    if( (results = elf_read_func_symbols_fd(fd)) == NULL)
+        perror("elf_read_func_symbols_fd");
+    
+    close(fd);
+
+    return results;
+    
 }
 
 

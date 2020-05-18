@@ -30,7 +30,7 @@ int main(int argc, char** argv)
     
     func_symbol_t *symbols;
     
-    symbols = elf_read_func_symbols("./phook"); 
+    symbols = elf_read_func_symbols_file("./phook"); 
     func_symbol_t *main_symbol = resolve_func_symbol_byid(symbols, "main"); 
     print_func_symbol(main_symbol);
     

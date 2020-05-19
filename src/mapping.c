@@ -68,7 +68,7 @@ mapping_t* parse_mapping(char* to_parse)
     char* acc;
     
     /*
-     * <LOWER_BOUND>-<UPPER_BOUND> <prots><flag> <offset> <dev_lo>:<dev_hi> <inode>    <backed_by>
+     * <LOWER_BOUND>-<UPPER_BOUND> <prots><flag> <offset> <dev_hi>:<dev_lo> <inode>    <backed_by>
      */
 
     result = calloc(1, sizeof *result);

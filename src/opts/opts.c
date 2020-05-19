@@ -57,7 +57,8 @@ opts_t *read_opts_json(char* json_buf)
     cJSON*  acc;
     
     bool is_string;
-
+    
+    char* real_path;
     opts_t* result;
      
     #define parsing_error(err, ...) \
@@ -86,10 +87,14 @@ opts_t *read_opts_json(char* json_buf)
 
     if(cJSON_IsString(exec_list))
     {
-        result->target_executable.path = strdup(exec_list->valuestring);
-        
+        if( (result->target_executable.path = realpath(exec_list->valuestring, NULL)) == NULL)
+        {
+            perror("realpath");
+            fprintf(stderr, "File: %s\n", exec_list->valuestring);
+            exit(1);
+        }
         result->target_executable.argv = malloc(sizeof(char*) * 2);
-        result->target_executable.argv[0] = strdup(exec_list->valuestring);
+        result->target_executable.argv[0] = strdup(result->target_executable.path);
         result->target_executable.argv[1] = NULL;
     }
 
@@ -115,8 +120,21 @@ opts_t *read_opts_json(char* json_buf)
         {
             parsing_error("\"exec\": empty array.\n");
         }
-        
+         
         result->target_executable.argv[iterator_idx] = NULL;
+        
+
+        if( (real_path = realpath(result->target_executable.argv[0], NULL)) == NULL )
+        {
+            perror("realpath");
+            fprintf(stderr, "File: %s\n", result->target_executable.argv[0]);
+            exit(1);
+        }
+        
+        free(result->target_executable.argv[0]);
+
+        result->target_executable.argv[0] = real_path;
+
         result->target_executable.path = strdup(result->target_executable.argv[0]);
 
     }
@@ -188,7 +206,12 @@ opts_t *read_opts_json(char* json_buf)
         parsing_error("\"to_inject\": either missing or not [string]\n");
     }
     
-    result->to_inject_path = strdup(acc->valuestring);
+    if( (result->to_inject_path = realpath(acc->valuestring, NULL)) == NULL)
+    {
+        perror("realpath");
+        fprintf(stderr, "File: %s\n", acc->valuestring);
+        exit(1);
+    }
     
     acc = cJSON_GetObjectItemCaseSensitive(parsed, "hooks");
 

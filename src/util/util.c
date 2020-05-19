@@ -52,8 +52,8 @@ char* read_text_file_procfs(char* filename)
         }
     }
 
-    result[n_read] = '\x00';
-    result = realloc(result, n_read + 1);
+    result[n_read - 1] = '\x00';
+    result = realloc(result, n_read);
     
     return result;
 }

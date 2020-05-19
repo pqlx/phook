@@ -1,5 +1,9 @@
 #pragma once
 
+#include <stdbool.h>
+
+#include "../elf/elf.h"
+
 typedef struct generic_offset {
     
     enum {
@@ -62,3 +66,7 @@ opts_t *read_opts_file(char*);
 opts_t *read_opts_json(char*);
 
 void free_opts(opts_t*);
+
+
+generic_offset_t* resolve_generic_offset(generic_offset_t*, const func_symbol_t*);
+bool resolve_hook_targets(hook_target_t*, const elf_file_t*, const elf_file_t*);

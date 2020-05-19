@@ -11,12 +11,12 @@
         
         {
             "target_offset": "0x1234",
-            "hook_offset": "do_hook_0"
+            "hook_offset": "example_hook_1"
         },
 
         {
             "target_offset": 21514,
-            "hook_offset": "do_hook_1"
+            "hook_offset": "example_hook_2"
         }
 
     ]

@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
 #include <libgen.h>
 
 #include "opts.h"
@@ -340,4 +339,60 @@ static void print_opts(opts_t *opts)
     }
 
     puts("<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>");
+}
+
+generic_offset_t* resolve_generic_offset(generic_offset_t* offset, const func_symbol_t* symbol)
+{
+    switch(offset->type)
+    {
+        /* We need no changing */
+        case OFFSET_RAW:
+            return offset;
+            break;
+
+        case OFFSET_SYMBOL:
+            while(symbol)
+            {
+                if(!strcmp(offset->symbol, symbol->identifier))
+                {
+                    offset->type = OFFSET_RAW;
+                    offset->raw  = symbol->value;
+                    return offset;
+                }
+                symbol = symbol->next;
+            }
+            return NULL;
+            break;
+
+        default:
+            return NULL; 
+    }
+}
+
+bool resolve_hook_targets(hook_target_t* hook_target, const elf_file_t* target_elf, const elf_file_t* lib_elf)
+{
+    /* Resolve hook target symbols. 
+     * This will change every generic_offset_t into a OFFSET_RAW.
+     * */
+    bool success;
+    success = true;
+      
+    while(hook_target)
+    {
+        
+        if(hook_target->target_offset.type == OFFSET_SYMBOL && !resolve_generic_offset(&hook_target->target_offset, target_elf->info->func_symbols))
+        {
+            success = false;
+            fprintf(stderr, "%s: Could not resolve symbol <%s>\n", target_elf->path, hook_target->target_offset.symbol);
+        }
+
+        if(hook_target->hook_offset.type == OFFSET_SYMBOL && !resolve_generic_offset(&hook_target->hook_offset, lib_elf->info->func_symbols))
+        {
+            success = false;
+            fprintf(stderr, "%s: Could not resolve symbol <%s>\n", lib_elf->path, hook_target->hook_offset.symbol);
+        }
+        hook_target = hook_target->next;
+    }
+    
+    return success;
 }

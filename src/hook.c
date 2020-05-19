@@ -15,6 +15,11 @@ void start_hook(opts_t* opts)
         fputs("Terminating...\n", stderr);
         exit(1);
     }
+    
+    if(!resolve_hook_targets(opts->hooks, target, inject_lib))
+    {
+        fputs("Terminating...\n", stderr);
+        exit(1);
+    }
 
-    printf("%p%p", target, inject_lib);
 }

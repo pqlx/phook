@@ -22,8 +22,7 @@ elf_file_t* elf_file_fill(char* path)
         printf("File: %s\n", path);
         return NULL;
     }
-    
-    
+        
     result->info = elf_process_file(result->path);
 
     return result;

@@ -8,6 +8,7 @@
 
 #include "opts/opts.h"
 #include "elf/elf.h"
+#include "mapping.h"
 
 /* HOOKING MECHANISM:
  * ----------------------------------------------------
@@ -39,6 +40,8 @@
  * This struct is used to represent a hook during the actual inferior execution.
  * */
 
+#define TRAP_OP 0xcc
+
 typedef struct active_hook {
     enum hook_mode mode;
 
@@ -57,10 +60,10 @@ typedef struct inferior {
     pid_t pid;
     active_hook_t* hooks;
     
-    enum linkage link_type;
-    
     elf_file_t* target;
     elf_file_t* inject_lib;
+
+    mapping_t** mappings;
 } inferior_t;
 
 void start_hook(opts_t*);

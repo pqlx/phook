@@ -238,6 +238,8 @@ opts_t *read_opts_json(char* json_buf)
 
             hook = calloc(1, sizeof *result->hooks);
             
+            /* TODO make it set-able */
+            hook->mode = HOOK_REPLACE; 
 
             hook_entry = cJSON_GetObjectItemCaseSensitive(iterator, "target_offset");
             json_parse_generic_offset(&hook->target_offset, hook_entry, iterator_idx);

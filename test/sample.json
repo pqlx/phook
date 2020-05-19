@@ -10,15 +10,9 @@
     "hooks": [
         
         {
-            "target_offset": "0x1234",
+            "target_offset": "main",
             "hook_offset": "example_hook_1"
-        },
-
-        {
-            "target_offset": 21514,
-            "hook_offset": "example_hook_2"
         }
-
     ]
 
 }

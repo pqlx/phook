@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "parse.h"
+#include "elf.h"
 
 elf_file_t* elf_file_fill(char* path)
 {

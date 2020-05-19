@@ -7,7 +7,7 @@
 #include <sys/ptrace.h>
 
 #include "opts/opts.h"
-#include "elf/parse.h"
+#include "elf/elf.h"
 
 /* HOOKING MECHANISM:
  * ----------------------------------------------------

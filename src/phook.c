@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "opts/opts.h"
-#include "elf/parse.h"
+#include "elf/elf.h"
 #include "hook.h"
 
 void usage(void)

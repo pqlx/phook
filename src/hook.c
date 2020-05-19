@@ -66,7 +66,7 @@ void start_hook(opts_t* opts)
 
 void write_hook(inferior_t* inferior, active_hook_t* hook)
 {
-    hook->replaced_opcode = (uint8_t)ptrace_write_u8(inferior->pid, hook->target_address, TRAP_OP);
+    hook->replaced_opcode = (uint8_t)ptrace_read_write_u8(inferior->pid, hook->target_address, TRAP_OP);
 }
 
 void apply_hooks(inferior_t* inferior, hook_target_t* pending)

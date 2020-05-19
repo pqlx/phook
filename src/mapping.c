@@ -29,6 +29,7 @@ mapping_t** fetch_mappings_for(pid_t target_pid)
 
 mapping_t** parse_mappings(char* to_parse)
 {
+    printf("TOTAL: %s\n", to_parse);
     mapping_t** result = malloc(sizeof *result);
     mapping_t* current;
 
@@ -123,11 +124,11 @@ mapping_t* parse_mapping(char* to_parse)
     *acc = '\x00';
     
     result->inode = strtoll(to_parse, NULL, 10);
-    to_parse = acc + 1;
+    to_parse = acc;
 
-    while(*to_parse++ == ' ');
+    while( to_parse++[1] == ' ');
     
-
+    printf("To parse: %s\n", to_parse);
     result->backed_by = NULL;
     
     switch(*to_parse)

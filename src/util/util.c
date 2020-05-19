@@ -28,6 +28,36 @@ char* read_text_file(char* filename)
     return contents;
 }
 
+char* read_text_file_procfs(char* filename)
+{
+    /*
+     * Since procfs files do not have a size, We'll need to
+     * read it the clumsy way. */
+
+    char* result = malloc(0x100 + 1);
+    size_t n_read = 0;
+    FILE* handle;
+    
+    if( (handle = fopen(filename, "r")) == NULL)
+    {
+        perror("fopen");
+        exit(1);
+    }
+
+    while( (result[n_read++] = fgetc(handle)) != EOF)
+    {
+        if(n_read % 0x100)
+        {
+            result = realloc(result, 0x100 + n_read + 1); 
+        }
+    }
+
+    result[n_read] = '\x00';
+    result = realloc(result, n_read + 1);
+    
+    return result;
+}
+
 uint8_t* read_binary_file(char* filename, size_t* dest_size)
 {
     size_t file_len;

@@ -17,7 +17,7 @@ mapping_t** fetch_mappings_for(pid_t target_pid)
     else
         strcpy(path, "/proc/self/maps");
 
-    contents = read_text_file(path);
+    contents = read_text_file_procfs(path);
     
     result = parse_mappings(contents);
 
@@ -29,7 +29,7 @@ mapping_t** fetch_mappings_for(pid_t target_pid)
 
 mapping_t** parse_mappings(char* to_parse)
 {
-    mapping_t** result = NULL;
+    mapping_t** result = malloc(sizeof *result);
     mapping_t* current;
 
     size_t n = 0;
@@ -40,13 +40,17 @@ mapping_t** parse_mappings(char* to_parse)
         if(*to_parse == '\n')
         {
             *to_parse = '\x00';
+            
+            /* /proc/pid/maps can contain blank lines sometimes */
+            if(to_parse[1] != '\n')
+            {
+                current = parse_mapping(to_parse - n);
+                result = realloc(result, (n_mappings + 2) * sizeof *result);
+                result[n_mappings] = current;
 
-            current = parse_mapping(to_parse - n);
-            result = realloc(result, (n_mappings + 2) * sizeof *result);
-            result[n_mappings] = current;
-
-            n_mappings++;
-            n = 0;
+                n_mappings++;
+                n = 0;
+            }
         }
         else
         {
@@ -173,15 +177,43 @@ mapping_t* parse_mapping(char* to_parse)
     return result;
 }
 
-mapping_t *resolve_mapping_byaddr(const void* address, const mapping_t** mappings)
+void free_mappings(mapping_t** mappings)
 {
-    const mapping_t* mapping;
+    mapping_t* current;
+
+    while( (current = *mappings++) != NULL)
+    {
+        free(current);
+    }
+
+    free(mappings);
+}
+
+mapping_t *resolve_mapping_byaddr(const void* address, mapping_t** mappings)
+{
+    mapping_t* mapping;
 
     while( (mapping = *mappings++) != NULL)
     {
         if(address >= mapping->lower_bound && address <= mapping->upper_bound)
-            return (mapping_t*) mapping;
+            return mapping;
 
     }
     return NULL;
+}
+
+mapping_t* resolve_mapping_byfile(const char* filename, mapping_t** mappings, bool get_first)
+{
+    mapping_t *mapping, *result;
+    result = NULL;
+    while( (mapping = *mappings++) != NULL)
+    {
+        if(mapping->mapping_type == MAPPING_FILE && !strcmp(mapping->backed_by, filename))
+        {
+            result = mapping;
+            if(get_first)
+                return result;
+        }
+    }
+    return result;
 }

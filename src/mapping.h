@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 /*
  * C-representation of an entry in the output of /proc/pid/maps.
@@ -40,4 +41,7 @@ mapping_t** fetch_mappings_for(pid_t);
 mapping_t** parse_mappings(char*);
 mapping_t*  parse_mapping(char*);
 
-mapping_t* resolve_mapping_byaddr(const void*, const mapping_t**);
+void free_mappings(mapping_t**);
+
+mapping_t* resolve_mapping_byaddr(const void*, mapping_t**);
+mapping_t* resolve_mapping_byfile(const char*, mapping_t**, bool);

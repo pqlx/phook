@@ -8,7 +8,6 @@
 #include "../util/util.h"
 #include "../util/richtext.h"
 
-static void print_opts(opts_t*);
 
 opts_t *read_opts_file(char* filename)
 {
@@ -265,7 +264,6 @@ opts_t *read_opts_json(char* json_buf)
 
     cJSON_Delete(parsed);
 
-    print_opts(result);
     return result;
 
     #undef parse_error
@@ -338,7 +336,7 @@ static void print_hook_target(hook_target_t *hook, char* target_file, char* lib_
     putchar('\n');
 }
 
-static void print_opts(opts_t *opts)
+void print_opts(opts_t *opts)
 {
     size_t i;
     hook_target_t *hook;

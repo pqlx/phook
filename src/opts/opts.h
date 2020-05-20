@@ -62,6 +62,8 @@ typedef struct opts {
 opts_t *read_opts_file(char*);
 opts_t *read_opts_json(char*);
 
+
+void print_opts(opts_t*);
 void free_opts(opts_t*);
 
 

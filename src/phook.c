@@ -29,6 +29,9 @@ int main(int argc, char** argv)
     opts_t* opts;
     opts = read_opts_file(config_file);
     
+    print_opts(opts);    
+    
+    printf("\n\n\n");
     start_hook(opts);    
     
     return 0;

@@ -192,27 +192,21 @@ void ptrace_set_fpregs(pid_t pid, struct user_fpregs_struct* fpregs)
     ptrace(PTRACE_SETFPREGS, pid, NULL, fpregs);
 }
 
-uint8_t* ptrace_memcpy(pid_t pid, void* dest, const uint8_t* src, size_t n, bool retain_old)
+void ptrace_memcpy_to(pid_t pid, void* dest, const uint8_t* src, size_t n, uint8_t* old)
 {
     /* Memcpy a `n`-sized buffer from `src` to tracee's `dest`.
-     * if retain_old is set, a malloc'd pointer to the old data is returned.
+     * if `old` is set, The old values are written to it.
+     * A buffer of at least `n` bytes should be passed.
      * */
     
-    uint8_t *result = NULL, *cpy;
-
-    if(retain_old)
-    {
-        result = cpy = malloc(n);
-    }
-
     uint64_t value;
 
     while(n != 0)
     {
         if(n >= 8)
         {
-           if(retain_old)
-                *(uint64_t*)cpy++ = ptrace_read_write_u64(pid, dest, *(uint64_t*)src++);
+           if(old)
+                *(uint64_t*)old++ = ptrace_read_write_u64(pid, dest, *(uint64_t*)src++);
            else
                 ptrace_write_u64(pid, dest, *(uint64_t*)src++);
 
@@ -223,8 +217,8 @@ uint8_t* ptrace_memcpy(pid_t pid, void* dest, const uint8_t* src, size_t n, bool
         {
             value = ptrace_read_write_u32(pid, dest, *(uint32_t*)src++);
 
-            if(retain_old)
-                *(uint32_t*)cpy++ = (uint32_t)value;
+            if(old)
+                *(uint32_t*)old++ = (uint32_t)value;
 
             n -= 4;
         }
@@ -232,8 +226,8 @@ uint8_t* ptrace_memcpy(pid_t pid, void* dest, const uint8_t* src, size_t n, bool
         {
             value = ptrace_read_write_u16(pid, dest, *(uint16_t*)src++);
 
-            if(retain_old)
-                *(uint16_t*)cpy++ = (uint16_t)value;
+            if(old)
+                *(uint16_t*)old++ = (uint16_t)value;
             
             n -= 2;
         }
@@ -242,14 +236,12 @@ uint8_t* ptrace_memcpy(pid_t pid, void* dest, const uint8_t* src, size_t n, bool
             /* n == 1 */
             value = ptrace_read_write_u8(pid, dest, *(uint8_t*)src++);
 
-            if(retain_old)
-                *cpy++ = (uint8_t)value;
+            if(old)
+                *old++ = (uint8_t)value;
             
             n--;
         }
     }
-
-    return result;
 }
 
 
@@ -263,8 +255,6 @@ void ptrace_run_shellcode(pid_t pid, const uint8_t* shellcode, size_t n, void* r
 
     memcpy(final_shellcode, shellcode, n);
     memcpy(&final_shellcode[n], epilogue, sizeof epilogue);
-
-
      
 
 }

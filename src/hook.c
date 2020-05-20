@@ -9,6 +9,7 @@
 #include "hook.h"
 #include "util/trace.h"
 #include "util/richtext.h"
+#include "util/util.h"
 
 
 inferior_t* create_inferior(opts_t* opts, elf_file_t* target, elf_file_t* inject_lib)
@@ -28,6 +29,11 @@ inferior_t* create_inferior(opts_t* opts, elf_file_t* target, elf_file_t* inject
 
 }
 
+void inferior_reload_mappings(inferior_t* inferior)
+{
+    free_mappings(inferior->mappings);
+    inferior->mappings = fetch_mappings_for(inferior->pid);
+}
 
 void inject_library(inferior_t* inferior)
 {
@@ -39,27 +45,92 @@ void inject_library(inferior_t* inferior)
      * load the correct offsets for our hooks.
      *
      * This method is preferrable to something like LD_PRELOAD.
-     * although support might be added for preloadomg in the future,
-     * this is a much more portable solution.
+     * This is a much more portable solution.
      *
      * This method will only work for binaries that either have the linker loaded,
-     * or have a _dl_start symbol statically linked. if neither of these constraints
+     * or have a _dl_open symbol statically linked. if neither of these constraints
      * are satisfieds we will need to manually load our ELF.
      * */
-
-    return;
     
 }
 
+inferior_t* do_hook_static (opts_t* opts, elf_file_t* target, elf_file_t* inject_lib)
+{
+    /* Not yet implemented */
+    
+    return NULL;
+}
 
+inferior_t* do_hook_dynamic(opts_t* opts, elf_file_t* target, elf_file_t* inject_lib)
+{
+    /*
+     * Easiest course of action: simply inject our library
+     * using LD_PRELOAD.
+     * */
+
+    char** envp = opts->target_executable.envp;
+    
+    bool is_resolved = false;
+
+    /*
+     * If LD_PRELOAD is already set, append to string.. */ 
+    while(*envp)
+    {
+
+        if(!strncmp(*envp, "LD_PRELOAD=", 11))
+        {
+            size_t current_preload_length = strlen(*envp);
+
+            /* Plus one for ' ' plus one for null byte = + 2*/
+            size_t total_preload_length = current_preload_length + strlen(inject_lib->path) + 2;
+            
+            *envp = realloc(*envp, total_preload_length);
+
+            (*envp)[current_preload_length] = ' ';
+            strcpy(&((*envp)[current_preload_length + 1]), inject_lib->path);
+            
+            is_resolved = true;
+            
+            break;
+            
+        }
+        envp++;
+    }
+
+    /* Else, simply append to array. */
+    if(!is_resolved)
+    {
+        /* 11 for "LD_PRELOAD=", 1 for null byte */
+        char* ld_preload = malloc(11 + strlen(inject_lib->path) + 1); 
+        sprintf(ld_preload, "LD_PRELOAD=%s", inject_lib->path);
+        
+        strarray_append(opts->target_executable.envp, ld_preload);
+    }
+    
+    inferior_t* inferior = create_inferior(opts, target, inject_lib);
+    
+    return inferior;
+}
+
+
+void do_hook_loop(inferior_t* inferior)
+{
+    int status;
+    while(true)
+    {
+        waitpid(inferior->pid, &status, 0); 
+
+    }
+}
 void start_hook(opts_t* opts)
 {
     elf_file_t *target, *inject_lib;
-    int status;
 
     target     = elf_file_fill(opts->target_executable.path);
     inject_lib = elf_file_fill(opts->to_inject_path);
     
+    inferior_t* (*hook_func)(opts_t*, elf_file_t*, elf_file_t*);
+
     if(target == NULL || inject_lib == NULL)
     {
         fputs("Terminating...\n", stderr);
@@ -72,31 +143,32 @@ void start_hook(opts_t* opts)
         exit(1);
     }
     
-    inferior_t* inferior = create_inferior(opts, target, inject_lib);
 
-    if(target->info->link_type == LINK_DYNAMIC)
+    switch(target->info->link_type)
     {
-        //inject_library(inferior);
-
-        apply_hooks(inferior, opts->hooks);
-    }
-    else
-    {
-        fprintf(stderr, "There is no support for statically linked executables as of now.\n");
-        exit(1);
+        case LINK_DYNAMIC:
+            hook_func = do_hook_dynamic;
+            break;
+        case LINK_STATIC:
+            hook_func = do_hook_static;
+            break;
     }
     
-    print_active_hooks(inferior->hooks);
-    
+    inferior_t* inferior;
 
+    if( (inferior = hook_func(opts, target, inject_lib)) == NULL)
+    {
+        printf("Something went terribly wrong....\n\n");
+        exit(1); 
+    };
+
+    apply_hooks(inferior, opts->hooks);
+    
     ptrace(PTRACE_CONT, inferior->pid, NULL, NULL);
-    
-    waitpid(inferior->pid, &status, 0);
-
-
-    struct user_aregs_struct* state = ptrace_get_aregs(inferior->pid);
-    print_aregs(state);
+  
+    do_hook_loop(inferior);
 }
+
 
 void write_hook(inferior_t* inferior, active_hook_t* hook)
 {
@@ -106,7 +178,7 @@ void write_hook(inferior_t* inferior, active_hook_t* hook)
 void apply_hooks(inferior_t* inferior, hook_target_t* pending)
 {
 
-    mapping_t *target_first_mapping, *target_last_mapping;
+    mapping_t *target_first_mapping, *target_last_mapping, *lib_mapping;
     
     if( (target_first_mapping = resolve_mapping_byfile(inferior->target->path, inferior->mappings, true)) == NULL)
     {
@@ -118,7 +190,11 @@ void apply_hooks(inferior_t* inferior, hook_target_t* pending)
     {
         fprintf(stderr, "Could not resolve executable mapping in child [end].\n");
     }
-            
+    
+    
+
+    inferior->lib_needs_rebase = !(lib_mapping = resolve_mapping_byfile(inferior->inject_lib->path, inferior->mappings, true));
+    
     void *target_base = target_first_mapping->lower_bound;
     void *target_end  = target_last_mapping->upper_bound;
 
@@ -154,8 +230,8 @@ void apply_hooks(inferior_t* inferior, hook_target_t* pending)
         current->target_address = target_address;
         current->target_symbol  = pending->target_offset.symbol == NULL ? NULL : strdup(pending->target_offset.symbol);
 
-        /* This one is currently not based, we will do that once the first trap is hit. */
-        current->hook_address = (void*)pending->hook_offset.raw;
+        current->hook_address = (void*)(pending->hook_offset.raw + (lib_mapping ? lib_mapping->lower_bound : 0));
+        
         current->hook_symbol  = pending->hook_offset.symbol == NULL ? NULL : strdup(pending->hook_offset.symbol);
 
         current->n_triggered = 0; 
@@ -168,6 +244,7 @@ void apply_hooks(inferior_t* inferior, hook_target_t* pending)
         inferior->hooks = current;
         pending = pending->next;
     }
+
 }
 
 pid_t spawn_child(opts_t* opts)

@@ -54,20 +54,25 @@ typedef struct active_hook {
     uint8_t replaced_opcode; /* The opcode at `target_adress` that we've overwritten. */
     size_t n_triggered; /* times triggered in total. */
     bool is_active;     /* whether this hook is placed. */
+
     struct active_hook* next;
 
 } active_hook_t;
 
 typedef struct inferior {
     pid_t pid;
-    active_hook_t* hooks;
+    
+    active_hook_t* hooks;    
+    bool lib_needs_rebase;
     
     elf_file_t* target;
     elf_file_t* inject_lib;
-
+    
     mapping_t** mappings;
 } inferior_t;
 
+
+void inferior_reload_mappings(inferior_t*);
 
 void inject_library(inferior_t*);
 void start_hook(opts_t*);

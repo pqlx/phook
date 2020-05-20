@@ -30,7 +30,7 @@ int main(int argc, char** argv)
     opts = read_opts_file(config_file);
     
     start_hook(opts);    
-
+    
     return 0;
 
 }

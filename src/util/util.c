@@ -86,13 +86,12 @@ uint8_t* read_binary_file(char* filename, size_t* dest_size)
 
 char** strarray_append(char** array, char* to_append)
 {
-    char** counter = array;
-    size_t n;
+    size_t n = 0;
 
-    while(*counter)
-        counter++;
+    while(array[n])
+        n++;
     
-    n = (counter - array)/(sizeof *array);
+    printf("%ld\n", n);
 
     array = realloc(array, (n + 2) * sizeof(*array));
 

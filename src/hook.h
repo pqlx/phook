@@ -40,8 +40,6 @@
  * This struct is used to represent a hook during the actual inferior execution.
  * */
 
-#define TRAP_OP 0xcc
-
 typedef struct active_hook {
     enum hook_mode mode;
 

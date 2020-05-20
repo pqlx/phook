@@ -55,6 +55,7 @@ void inject_library(inferior_t* inferior)
 void start_hook(opts_t* opts)
 {
     elf_file_t *target, *inject_lib;
+    int status;
 
     target     = elf_file_fill(opts->target_executable.path);
     inject_lib = elf_file_fill(opts->to_inject_path);
@@ -87,12 +88,14 @@ void start_hook(opts_t* opts)
     
     print_active_hooks(inferior->hooks);
     
-    struct user_aregs_struct* state = ptrace_get_aregs(inferior->pid);
-
-    print_aregs(state); 
 
     ptrace(PTRACE_CONT, inferior->pid, NULL, NULL);
+    
+    waitpid(inferior->pid, &status, 0);
 
+
+    struct user_aregs_struct* state = ptrace_get_aregs(inferior->pid);
+    print_aregs(state);
 }
 
 void write_hook(inferior_t* inferior, active_hook_t* hook)
@@ -219,5 +222,3 @@ void print_active_hooks(active_hook_t* hook)
         hook = hook->next;
     }
 }
-
-

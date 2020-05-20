@@ -6,6 +6,9 @@
 #include <sys/user.h> /* user_regs_struct, user_fpregs_struct */
 #include <sys/reg.h>  /* register offsets in user_regs_struct */
 
+/* int3 on x86_64 */
+#define TRAP_OP 0xcc
+
 /*
  * https://code.woboq.org/userspace/glibc/sysdeps/unix/sysv/linux/x86/sys/user.h.html
  */
@@ -55,4 +58,4 @@ void ptrace_set_fpregs(pid_t, struct user_fpregs_struct*);
 
 void ptrace_memcpy_from(pid_t, uint8_t*, void*, size_t);
 void ptrace_memcpy_to(pid_t, void*, const uint8_t*, size_t, uint8_t*);
-void ptrace_execute_shellcode(pid_t, const uint8_t*, size_t, void*);
+void ptrace_execute_shellcode(pid_t, const uint8_t*, size_t);

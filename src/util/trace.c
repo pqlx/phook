@@ -1,4 +1,5 @@
 #include <sys/ptrace.h>
+#include <sys/wait.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -319,20 +320,49 @@ void ptrace_memcpy_to(pid_t pid, void* dest, const uint8_t* src, size_t n, uint8
     }
 }
 
-
-
-void ptrace_execute_shellcode(pid_t pid, const uint8_t* shellcode, size_t n, void* return_address)
+void ptrace_execute_shellcode(pid_t pid, const uint8_t* shellcode, size_t n)
 {
-    char epilogue[] = { 0xcc };
+    /*
+     * Provides functionality to execute code, given in `shellcode`,
+     * in the tracee. We overwrite the values at the instruction pointer
+     * with our shellcode, followed by a trap instruction.
+     * After overwriting, we PTRACE_CONT to continue execution, 
+     * and upon hitting our trap, we swap our shellcode back again with
+     * the original data.*/
+
+    char epilogue[] = { TRAP_OP };
 
     size_t final_n = n + sizeof epilogue;
-    uint8_t* final_shellcode = malloc(final_n);
-
+    uint8_t* final_shellcode = malloc(final_n), *old_data = malloc(final_n);
+    
     memcpy(final_shellcode, shellcode, n);
     memcpy(&final_shellcode[n], epilogue, sizeof epilogue);
     
+    /*
+     * Gotcha: after ptrace hits a trap,
+     * rip will contain the location of the next instruction
+     * to be executed, NOT the location of the trap instruction.
+     * */
+
+    void* rip = (void*)ptrace_get_reg_u64(pid, RIP);    
     
+    ptrace_memcpy_to(pid, rip, final_shellcode, final_n, old_data);
+    
+    /* 
+     * Execute the shellcode and wait for the trap
+     * */
+    ptrace(PTRACE_CONT, pid, NULL, NULL);
+    waitpid(pid, NULL, 0);
+    
+    /*
+     * Restore contents 
+     * */ 
+    ptrace_memcpy_to(pid, rip, old_data, final_n, NULL);
+    
+    /* Restore old instruction pointer */ 
+    ptrace_set_reg_u64(pid, RIP, rip);
 
     free(final_shellcode);
+    free(old_data);
 
 }

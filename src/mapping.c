@@ -177,14 +177,11 @@ mapping_t* parse_mapping(char* to_parse)
 
 void free_mappings(mapping_t** mappings)
 {
-    mapping_t* current;
-
-    while( (current = *mappings++) != NULL)
+    while(*mappings)
     {
-        free(current);
+        free(*mappings);
+        mappings++;
     }
-
-    free(mappings);
 }
 
 mapping_t *resolve_mapping_byaddr(const void* address, mapping_t** mappings)

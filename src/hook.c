@@ -32,7 +32,33 @@ inferior_t* create_inferior(opts_t* opts, elf_file_t* target, elf_file_t* inject
 void inferior_reload_mappings(inferior_t* inferior)
 {
     free_mappings(inferior->mappings);
+    free(inferior->mappings);
     inferior->mappings = fetch_mappings_for(inferior->pid);
+}
+
+bool inferior_rebase_lib(inferior_t* inferior)
+{
+    mapping_t* lib_mapping;
+    inferior_reload_mappings(inferior);
+    
+
+    if( (lib_mapping = resolve_mapping_byfile(inferior->inject_lib->path, inferior->mappings, true)) == NULL)
+    {
+        return false;
+    }
+
+    active_hook_t* hook = inferior->hooks;
+    
+    while(hook)
+    {
+        hook->hook_address += (size_t)lib_mapping->lower_bound;
+
+        hook = hook->next;
+    }
+
+    return true;
+
+
 }
 
 void inject_library(inferior_t* inferior)
@@ -104,7 +130,7 @@ inferior_t* do_hook_dynamic(opts_t* opts, elf_file_t* target, elf_file_t* inject
         char* ld_preload = malloc(11 + strlen(inject_lib->path) + 1); 
         sprintf(ld_preload, "LD_PRELOAD=%s", inject_lib->path);
         
-        strarray_append(opts->target_executable.envp, ld_preload);
+        opts->target_executable.envp = strarray_append(opts->target_executable.envp, ld_preload);
     }
     
     inferior_t* inferior = create_inferior(opts, target, inject_lib);
@@ -116,9 +142,19 @@ inferior_t* do_hook_dynamic(opts_t* opts, elf_file_t* target, elf_file_t* inject
 void do_hook_loop(inferior_t* inferior)
 {
     int status;
+
     while(true)
     {
         waitpid(inferior->pid, &status, 0); 
+        
+        if(inferior->lib_needs_rebase && !inferior_rebase_lib(inferior))
+        {
+           printf("Could not rebase library.\n");
+           exit(1);
+
+        }
+
+        print_active_hooks(inferior->hooks);
 
     }
 }
@@ -250,7 +286,6 @@ void apply_hooks(inferior_t* inferior, hook_target_t* pending)
 pid_t spawn_child(opts_t* opts)
 {
     pid_t result;
-
     if( (result = fork()) == 0)
     {
         execute_inferior(

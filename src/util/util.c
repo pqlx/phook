@@ -91,8 +91,6 @@ char** strarray_append(char** array, char* to_append)
     while(array[n])
         n++;
     
-    printf("%ld\n", n);
-
     array = realloc(array, (n + 2) * sizeof(*array));
 
     array[n] = to_append;

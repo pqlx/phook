@@ -6,6 +6,7 @@
 #include "opts.h"
 #include "../lib/cjson/cJSON.h"
 #include "../util/util.h"
+#include "../util/richtext.h"
 
 static void print_opts(opts_t*);
 
@@ -302,6 +303,7 @@ void free_opts(opts_t* opts)
 
 static void print_generic_offset(generic_offset_t *offset)
 {
+    printf(TERM_COLOR_YELLOW);
     switch(offset->type)
     {
         case OFFSET_RAW:
@@ -314,15 +316,25 @@ static void print_generic_offset(generic_offset_t *offset)
             printf("<NONE>");
             break;
     }
+    printf(TERM_RESET);
 }
 
 static void print_hook_target(hook_target_t *hook, char* target_file, char* lib_file)
 {
-    printf("%s+", target_file);
+    printf( TERM_COLOR_GREEN "%s" TERM_RESET "+", target_file);
     print_generic_offset(&hook->target_offset);
     printf(" -------> ");
-    printf("%s+", lib_file);
+    printf( TERM_COLOR_GREEN "%s" TERM_RESET "+", lib_file);
     print_generic_offset(&hook->hook_offset);
+
+    printf(TERM_STYLE_BOLD " (mode: " TERM_COLOR_MAGENTA);
+    
+    if(hook->mode == HOOK_REPLACE)
+        printf("REPLACE");
+    else if(hook->mode == HOOK_DETOUR)
+        printf("DETOUR");
+
+    printf(")" TERM_RESET);
     putchar('\n');
 }
 
@@ -331,32 +343,32 @@ static void print_opts(opts_t *opts)
     size_t i;
     hook_target_t *hook;
 
-    puts("<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>");
+    puts(TERM_STYLE_BOLD "<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>" TERM_RESET);
 
-    printf("target path:  \"%s\"\n", opts->target_executable.path);
-    printf("argv:\n");
+    printf(TERM_STYLE_BOLD TERM_COLOR_MAGENTA "target path:  " TERM_RESET TERM_STYLE_DIM TERM_STYLE_UNDERLINE "\"%s\"" TERM_RESET "\n", opts->target_executable.path);
+    puts(TERM_STYLE_BOLD TERM_COLOR_MAGENTA "argv:" TERM_RESET);
     
     i = 0;
     if(opts->target_executable.argv)
         while(opts->target_executable.argv[i])
-            printf("\t\"%s\"\n", opts->target_executable.argv[i++]);
+            printf("\t\"" TERM_STYLE_DIM "%s" TERM_RESET "\"\n", opts->target_executable.argv[i++]);
     
 
-    printf("envp:\n");
+    puts( TERM_STYLE_BOLD TERM_COLOR_MAGENTA "envp:" TERM_RESET);
     i = 0;
 
     if(opts->target_executable.envp)
         while(opts->target_executable.envp[i])
-            printf("\t\"%s\"\n", opts->target_executable.envp[i++]);
+            printf("\t\"" TERM_STYLE_DIM "%s" TERM_RESET "\"\n", opts->target_executable.envp[i++]);
     
     putchar('\n');
 
-    printf("lib to inject: \"%s\"\n", opts->to_inject_path ? opts->to_inject_path : "NONE");
+    printf(TERM_STYLE_BOLD TERM_COLOR_MAGENTA "lib to inject: " TERM_RESET TERM_STYLE_DIM TERM_STYLE_UNDERLINE "\"%s\"" TERM_RESET "\n", opts->to_inject_path ? opts->to_inject_path : "NONE");
     
     hook = opts->hooks;
     
     if(hook)
-        printf("hooks:\n");
+        puts(TERM_STYLE_BOLD TERM_COLOR_MAGENTA "hooks:" TERM_RESET);
 
     while(hook)
     {
@@ -365,7 +377,7 @@ static void print_opts(opts_t *opts)
         hook = hook->next;
     }
 
-    puts("<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>");
+    puts(TERM_STYLE_BOLD "<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>" TERM_RESET);
 }
 
 generic_offset_t* resolve_generic_offset(generic_offset_t* offset, const func_symbol_t* symbol)

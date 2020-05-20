@@ -138,7 +138,7 @@ elf_info_t* elf_process_fd(int fd)
                 exit(1);
             }
 
-            free(intepreter); 
+            free(interpreter); 
             break;
         }
             

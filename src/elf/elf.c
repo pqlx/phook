@@ -63,8 +63,6 @@ elf_info_t* elf_process_fd(int fd)
         }
     }
     
-
-
     result = calloc(1, sizeof *result); 
     if(found)
     { 
@@ -112,9 +110,35 @@ elf_info_t* elf_process_fd(int fd)
     {
         gelf_getphdr(elf, i, &program_header);
 
+        /* The ELF file is dynamically loaded if it contains a PT_INTERP segment.
+         * If this segment exists, it also contains an offset in the file to the interpreter string.
+         * this offset is given in program_header.p_offset */
+
         if(program_header.p_type == PT_INTERP)
         {
             result->link_type = LINK_DYNAMIC;
+            
+            /* Sanity check */
+
+            if(program_header.p_memsz > 0x100)
+            {
+                fprintf(stderr, "PT_INTERP phdr.p_memsz > 0x100.\n");
+                exit(1);
+            }
+
+            /* Read the interpreter string. */
+            char* interpreter = malloc(program_header.p_memsz + 1);
+            lseek(fd, program_header.p_offset, SEEK_SET);
+            interpreter[read(fd, interpreter, program_header.p_memsz)] = '\x00'; 
+            
+            if ( (result->interpreter = realpath(interpreter, NULL) ) == NULL)
+            {
+                perror("realpath");
+                fprintf(stderr, "File: %s\n", interpreter);
+                exit(1);
+            }
+
+            free(intepreter); 
             break;
         }
             

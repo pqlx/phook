@@ -19,6 +19,8 @@ typedef struct elf_info {
         LINK_DYNAMIC = 0x01
     } link_type;
 
+    char* interpreter;
+
 } elf_info_t;
 
 typedef struct elf_file {

@@ -276,11 +276,34 @@ void do_hook_loop(inferior_t* inferior)
                 /* Even amount -> option 2 */
                 else
                 {
+                    /* Since we've overwritten the first byte of the hook target
+                     * with the trap operation, we will need to:
+                     *  1. place it back
+                     *  2. "jmp" to it
+                     *  3. execute the instruction
+                     *  4. place the trap op back
+                     *  */
+                    
+                    /* Position rip to point to our trap op */
+                    active_hook->detour_state->regs.rip -= 1;
+                    
+                    /* Place back original opcode */
+                    ptrace_read_write_u8(inferior->pid, (void*)active_hook->detour_state->regs.rip, active_hook->replaced_opcode);
+                
+                    /* Restore the state */
                     ptrace_set_aregs(inferior->pid, active_hook->detour_state);
+                    
+                    /* Execute the first instruction again */
+                    ptrace(PTRACE_SINGLESTEP, inferior->pid, 0, 0);
+                    
+                    /* Restore trap op */ 
+                    ptrace_read_write_u8(inferior->pid, (void*)active_hook->detour_state->regs.rip, TRAP_OP);
                     
                     /* We don't need it anymore - properly clean it up */
                     free(active_hook->detour_state);
                     active_hook->detour_state = NULL;
+
+                    
                             
                 }
         }

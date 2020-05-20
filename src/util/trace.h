@@ -43,4 +43,4 @@ void ptrace_set_fpregs(pid_t, struct user_fpregs_struct*);
 
 void ptrace_memcpy_from(pid_t, uint8_t*, void*, size_t);
 void ptrace_memcpy_to(pid_t, void*, const uint8_t*, size_t, uint8_t*);
-void ptrace_run_shellcode(pid_t, const uint8_t*, size_t, void*);
+void ptrace_execute_shellcode(pid_t, const uint8_t*, size_t, void*);

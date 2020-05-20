@@ -268,7 +268,7 @@ void ptrace_memcpy_to(pid_t pid, void* dest, const uint8_t* src, size_t n, uint8
 
 
 
-void ptrace_run_shellcode(pid_t pid, const uint8_t* shellcode, size_t n, void* return_address)
+void ptrace_execute_shellcode(pid_t pid, const uint8_t* shellcode, size_t n, void* return_address)
 {
     char epilogue[] = { 0xcc };
 

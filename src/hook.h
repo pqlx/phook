@@ -10,6 +10,7 @@
 #include "elf/elf.h"
 #include "mapping.h"
 
+
 /* HOOKING MECHANISM:
  * ----------------------------------------------------
  * We use a ptrace-based hooking mechanism because it gives us a lot of control.
@@ -20,7 +21,7 @@
  *
  * We wait for these traps to trigger, on which we retrieve the register state and change 
  * the instruction pointer to point to our hook target, as well as storing the register state in the case of HOOK_PREPEND.
- * If the hook is of mode HOOK_PREPEND, we also hijack the return address to point to 
+ * If the hook is of mode HOOK_DETOUR, we also hijack the return address to point to 
  * the original target function. In this case, after the hook returns, the trap will be hit again, on which we will: 
  *  1. replace the overwritten 0xcc with the original opcode.
  *  2. change the instruction pointer back to the original target.
@@ -54,6 +55,9 @@ typedef struct active_hook {
     uint8_t replaced_opcode; /* The opcode at `target_adress` that we've overwritten. */
     size_t n_triggered; /* times triggered in total. */
     bool is_active;     /* whether this hook is placed. */
+    
+    /* Used to reset state when a detour is hit */ 
+    struct user_aregs_struct* detour_state;
 
     struct active_hook* next;
 
@@ -83,5 +87,9 @@ void execute_inferior(char*, char**, char**);
 
 void apply_hooks(inferior_t*, hook_target_t*);
 
+
+active_hook_t* resolve_active_hook_bytargetaddr(active_hook_t*, void*);
+
 void print_active_hook(active_hook_t*);
 void print_active_hooks(active_hook_t*);
+

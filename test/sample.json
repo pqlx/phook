@@ -2,16 +2,16 @@
     "target_executable": {
         "exec": ["test/build/target_dynamic"],
         "env": {
-            "A": "B",
-            "KEY": "VAL"
+            "TEST_ENV": "A",
+            "TEST_ENV_2": "B"
         }
     },
     "to_inject": "test/build/inject.so",
     "hooks": [
         
         {
-            "target_offset": "main",
-            "hook_offset": "example_hook_1"
+            "target_offset": "target",
+            "hook_offset": "hook"
         }
     ]
 

@@ -142,19 +142,149 @@ inferior_t* do_hook_dynamic(opts_t* opts, elf_file_t* target, elf_file_t* inject
 void do_hook_loop(inferior_t* inferior)
 {
     int status;
+    
+    active_hook_t* active_hook;
+    void* rip;
+    uint8_t prev_op;
 
     while(true)
     {
         waitpid(inferior->pid, &status, 0); 
         
+        
+        if(!WIFSTOPPED(status) || WSTOPSIG(status) != SIGTRAP)
+        {
+                     
+            if(WIFEXITED(status))
+            {
+                puts("Child has terminated.");
+                puts("Terminating..");
+                exit(1);
+            }
+            else
+            {
+                printf("Unknown status %d received..", status);
+                ptrace(PTRACE_CONT, inferior->pid, NULL, NULL);
+                continue;
+            }
+        }   
+        
+        /* At this point our library base address might 
+         * have not been resolved yet.
+         * If this is the case, we do it now, 
+         * and add it to ever hook target address 
+         * */
+
         if(inferior->lib_needs_rebase && !inferior_rebase_lib(inferior))
         {
-           printf("Could not rebase library.\n");
+           puts("Could not rebase library.");
+           puts("Terminating..");
            exit(1);
 
         }
+        else
+        {
+            inferior->lib_needs_rebase = false;
+        }
+        /* Fetch the tracee's instruction pointer to see which hook to trigger */
+        rip = (void*)ptrace_get_reg_u64(inferior->pid, RIP) - 1;
+        
+        /* It should be noted that at this point, the register
+         * state is set in such a way that the instruction pointer
+         * is located at the instruction AFTER our trap opcode.
+         * to get the correct hook address, we should subtrace 1 (size of int3)
+         * from it. 
+         * */
 
-        print_active_hooks(inferior->hooks);
+        /* Sanity check: If this check fails, then our SIGTRAP
+         * has been triggered by something else, which is not what
+         * we want. */ 
+        
+        prev_op = (uint8_t)ptrace_read_u64(inferior->pid, rip);
+
+        if( prev_op != TRAP_OP)
+        {
+            printf("Major warning: byte at %p is not %.2x but %.2x\n", rip, TRAP_OP, prev_op);
+            continue;
+        }
+
+        if( (active_hook = resolve_active_hook_bytargetaddr(inferior->hooks, rip)) == NULL)
+        {
+            printf("%p: could not find a hook here...\n", rip - 1);
+            continue;
+        } 
+        
+        active_hook->n_triggered++;
+        
+        void* rsp;
+
+        switch(active_hook->mode)
+        {
+            case HOOK_REPLACE:
+               /* This case is the simplest: 
+                * we simply change the instruction pointer
+                * to our hook target */
+
+                ptrace_set_reg_u64(inferior->pid, RIP, active_hook->hook_address);
+                break;
+            case HOOK_DETOUR:
+                /* This case is more complicated.
+                 * There are now two ways this trap can be hit:
+                 *  1. Our hook needs to be called
+                 *  2. Our hook has been called, and original execution should resume
+                 *
+                 * We differ this based on the amount of times 
+                 * this hook has been hit.
+                 * if everything goes as expected: an odd amount of hits signifies
+                 * option 1, and an even amount signifies option 2.
+                 *
+                 * */
+                
+                /* Odd amount -> option 1 */
+                if(active_hook->n_triggered & 1)
+                {
+                    /* Save our original register state.
+                    * We will restore this state in option 2. */
+                    
+                    active_hook->detour_state = ptrace_get_aregs(inferior->pid);                   
+                    
+                    /* Since we want to return to our
+                     * original function to resume execution,
+                     * we effectively need to emulate a `call` instruction
+                     * in our child:
+                     * 
+                     * sub rsp, 8
+                     * mov qword ptr [rsp], rip
+                     * jmp hook
+                     *
+                     * A minor gotcha: the `rip` should
+                     * be a pointer to our original trap op,
+                     * not to the instruction after it.
+                     * */
+                    
+                    /* push rip */
+                    rsp = (void*)ptrace_get_reg_u64(inferior->pid, RSP);
+                    ptrace_get_set_reg_u64(inferior->pid, RSP, (uint64_t)(rsp - 8));
+                    ptrace_read_write_u64(inferior->pid, rsp - 8, (uint64_t)rip);
+
+                    /* jmp hook */
+                    ptrace_set_reg_u64(inferior->pid, RIP, active_hook->hook_address);
+
+
+                }
+
+                /* Even amount -> option 2 */
+                else
+                {
+                    ptrace_set_aregs(inferior->pid, active_hook->detour_state);
+                    
+                    /* We don't need it anymore - properly clean it up */
+                    free(active_hook->detour_state);
+                    active_hook->detour_state = NULL;
+                            
+                }
+        }
+        ptrace(PTRACE_CONT, inferior->pid, NULL, NULL);
 
     }
 }
@@ -200,6 +330,8 @@ void start_hook(opts_t* opts)
 
     apply_hooks(inferior, opts->hooks);
     
+
+    ptrace(PTRACE_O_TRACEEXIT, inferior->pid, NULL, NULL);    
     ptrace(PTRACE_CONT, inferior->pid, NULL, NULL);
   
     do_hook_loop(inferior);
@@ -308,6 +440,18 @@ void execute_inferior(char* path, char** argv, char** envp)
     execve(path, argv, envp);
 }
 
+
+active_hook_t* resolve_active_hook_bytargetaddr(active_hook_t* hook, void* address)
+{
+    while(hook)
+    {
+        if(address == hook->target_address)
+            return hook;
+        hook = hook->next;
+    }
+    return NULL;
+}
+
 void print_active_hook(active_hook_t* hook)
 {
     printf("Hook at:    %p", hook->target_address);
@@ -334,3 +478,5 @@ void print_active_hooks(active_hook_t* hook)
         hook = hook->next;
     }
 }
+
+

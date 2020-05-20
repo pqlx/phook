@@ -18,7 +18,7 @@ typedef struct generic_offset {
 
 
 enum hook_mode {
-    HOOK_PREPEND  = 0x00, /* After the hook is done, execute original function */
+    HOOK_DETOUR  = 0x00, /* After the hook is done, execute original function */
     HOOK_REPLACE = 0x01  /* After the hook is done, return to caller and skip original execution */
 };
 
@@ -47,7 +47,6 @@ typedef struct opts {
         char** argv;     /* argv - will NOT always be set */
         char** envp;     /* envp - will NOT always be set */
         
-        generic_offset_t _dl_open_offset; /* as of now we NEED a _dl_open function to be present for statically linked binaries. */
     } target_executable;
 
     /* Path of the library we will inject; 

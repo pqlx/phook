@@ -1,9 +1,7 @@
-int example_hook_1(void)
-{
-    return 1;
-}
+#include <stdio.h>
 
-int example_hook_2(void)
+int hook(void)
 {
-    return 2;
+    puts("Hit hook!");
+    return 1;
 }

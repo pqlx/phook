@@ -1,5 +1,4 @@
 #include <libelf.h>
-#include <gelf.h>
 #include <fcntl.h>
 #include <stdbool.h>
 #include <unistd.h>
@@ -37,14 +36,18 @@ void elf_file_free(elf_file_t* elf)
     free(elf->path);
 }
 
-func_symbol_t* get_symbols_from_section(Elf* elf, GElf_Shdr* shdr, Elf_Scn* section)
+func_symbol_t* get_symbols_from_section(Elf* elf, Elf_Scn* section)
 {
     Elf_Data* data;
     size_t n_entries;
     
+    GElf_Shdr shdr;
+    
+    gelf_getshdr(section, &shdr);
+
     data = elf_getdata(section, NULL);
 
-    n_entries = shdr->sh_size / shdr->sh_entsize;
+    n_entries = shdr.sh_size / shdr.sh_entsize;
 
     func_symbol_t* result = NULL, *current;
     for(int i = 0; i < n_entries; ++i)
@@ -58,7 +61,7 @@ func_symbol_t* get_symbols_from_section(Elf* elf, GElf_Shdr* shdr, Elf_Scn* sect
              
              /* Make a copy of the string in the symbol table */
              current->identifier = strdup( 
-                     elf_strptr(elf, shdr->sh_link, symbol.st_name)
+                     elf_strptr(elf, shdr.sh_link, symbol.st_name)
                      );
                 
              current->value = symbol.st_value;
@@ -111,23 +114,11 @@ elf_info_t* elf_process_fd(int fd)
     
     result = calloc(1, sizeof *result); 
     
-
-    func_symbol_t* symbols;
+    if(dynsym) 
+        append_func_symbol(&result->func_symbols, get_symbols_from_section(elf, dynsym));
     
-    gelf_getshdr(dynsym, &section_header);
-
-    if(dynsym)
-        result->func_symbols = get_symbols_from_section(elf, &section_header, dynsym);
-    
-    gelf_getshdr(symtab, &section_header);
-    symbols = get_symbols_from_section(elf, &section_header, symtab);
     if(symtab)
-    {
-        if(!result->func_symbols)
-            result->func_symbols = symbols;
-        else
-            result->func_symbols->next = symbols;
-    }
+        append_func_symbol(&result->func_symbols, get_symbols_from_section(elf, symtab));
    
     GElf_Phdr program_header;
     size_t phdrnum;
@@ -204,6 +195,14 @@ elf_info_t* elf_process_file(char* filename)
 
     return results;
     
+}
+
+void append_func_symbol(func_symbol_t** chain, func_symbol_t* to_append)
+{
+    if(!*chain)
+        *chain = to_append;
+    else
+        (*chain)->next = to_append;
 }
 
 

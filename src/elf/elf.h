@@ -1,5 +1,6 @@
 #pragma once
 
+#include <gelf.h>
 #include <elf.h>
 
 typedef struct func_symbol {
@@ -35,10 +36,16 @@ void elf_file_free(elf_file_t*);
 elf_info_t* elf_process_file(char*);
 elf_info_t* elf_process_fd(int);
 
+
+func_symbol_t* get_symbols_from_section(Elf*, Elf_Scn*); 
+
+void append_func_symbol(func_symbol_t**, func_symbol_t*);
+
 void print_func_symbol(const func_symbol_t*);
 void print_func_symbols(const func_symbol_t*);
 
 func_symbol_t *resolve_func_symbol_byid(const func_symbol_t*, char*);
 func_symbol_t *resolve_func_symbol_byvalue(const func_symbol_t*, Elf64_Addr);
+
 
 void free_func_symbols(func_symbol_t*);

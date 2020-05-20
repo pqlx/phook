@@ -6,6 +6,10 @@
 #include "trace.h"
 #include "richtext.h"
 
+uint64_t ptrace_read_u64(pid_t pid, void* addr)
+{
+    return ptrace(PTRACE_PEEKDATA, pid, addr, NULL);
+}
 
 uint64_t ptrace_read_write_u64(pid_t pid, void* addr, uint64_t value)
 {
@@ -191,6 +195,24 @@ void ptrace_set_fpregs(pid_t pid, struct user_fpregs_struct* fpregs)
 {
     ptrace(PTRACE_SETFPREGS, pid, NULL, fpregs);
 }
+
+void ptrace_memcpy_from(pid_t pid, uint8_t* dest, void* src, size_t n)
+{
+    while(n != 0)
+    {
+        if(n >= 8)
+            n -= sizeof (*(uint64_t*)dest++ = (uint64_t)ptrace_read_u64(pid, (uint64_t*)src++));
+        
+        else if(n >= 4)
+            n -= sizeof (*(uint32_t*)dest++ = (uint32_t)ptrace_read_u64(pid, (uint32_t*)src++)); 
+
+        else if(n >= 2)
+            n -= sizeof (*(uint16_t*)dest++ = (uint16_t)ptrace_read_u64(pid, (uint16_t*)src++));
+        else
+            n -= sizeof (*(uint8_t*) dest++ = (uint8_t)ptrace_read_u64(pid, (uint16_t*)src++));
+            
+    }
+} 
 
 void ptrace_memcpy_to(pid_t pid, void* dest, const uint8_t* src, size_t n, uint8_t* old)
 {

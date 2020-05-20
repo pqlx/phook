@@ -14,13 +14,14 @@
 /*
  * All registers.
  * We need this to correctly restore state.
- * The systemV ABI specifies the floating point registers to be cluttered.
+ * The systemV ABI specifies some of the floating point registers to be cluttered.
  * */
 struct user_aregs_struct {
     struct user_regs_struct   regs;
     struct user_fpregs_struct fpregs;   
 };
 
+uint64_t ptrace_read_u64(pid_t, void*);
 
 uint64_t ptrace_read_write_u64(pid_t, void*, uint64_t); /* for consistency */
 uint64_t ptrace_read_write_u32(pid_t, void*, uint32_t);
@@ -40,5 +41,6 @@ void ptrace_set_regs(pid_t, struct user_regs_struct*);
 struct user_fpregs_struct* ptrace_get_fpregs(pid_t);
 void ptrace_set_fpregs(pid_t, struct user_fpregs_struct*);
 
+void ptrace_memcpy_from(pid_t, uint8_t*, void*, size_t);
 void ptrace_memcpy_to(pid_t, void*, const uint8_t*, size_t, uint8_t*);
 void ptrace_run_shellcode(pid_t, const uint8_t*, size_t, void*);

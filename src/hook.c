@@ -29,10 +29,32 @@ inferior_t* create_inferior(opts_t* opts, elf_file_t* target, elf_file_t* inject
 }
 
 
+void inject_library(inferior_t* inferior)
+{
+    /* Try to inject our target library into our child.
+     * The child is still in "suspended" state at this point.
+     * We overwrite the instructions at $rip to our shellcode,
+     * which calls _dl_start(inferior->inject_lib->path);
+     * We place an int3 instruction at the end, so we can 
+     * load the correct offsets for our hooks.
+     *
+     * This method is preferrable to something like LD_PRELOAD.
+     * although support might be added for preloadomg in the future,
+     * this is a much more portable solution.
+     *
+     * This method will only work for binaries that either have the linker loaded,
+     * or have a _dl_start symbol statically linked. if neither of these constraints
+     * are satisfieds we will need to manually load our ELF.
+     * */
+
+    return;
+    
+}
+
+
 void start_hook(opts_t* opts)
 {
     elf_file_t *target, *inject_lib;
-    // active_hook_t* hooks;
 
     target     = elf_file_fill(opts->target_executable.path);
     inject_lib = elf_file_fill(opts->to_inject_path);

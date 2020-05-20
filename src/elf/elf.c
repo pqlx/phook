@@ -28,6 +28,15 @@ elf_file_t* elf_file_fill(char* path)
     return result;
 }
 
+void elf_file_free(elf_file_t* elf)
+{
+    free_func_symbols(elf->info->func_symbols);
+    free(elf->info->interpreter);
+    free(elf->info);
+
+    free(elf->path);
+}
+
 elf_info_t* elf_process_fd(int fd)
 {
     /* Support reading from a raw fd directly.

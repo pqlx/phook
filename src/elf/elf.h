@@ -30,6 +30,8 @@ typedef struct elf_file {
 
 elf_file_t* elf_file_fill(char*);
 
+void elf_file_free(elf_file_t*);
+
 elf_info_t* elf_process_file(char*);
 elf_info_t* elf_process_fd(int);
 

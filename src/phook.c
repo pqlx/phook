@@ -32,6 +32,7 @@ int main(int argc, char** argv)
     print_opts(opts);    
     
     printf("\n\n\n");
+    
     start_hook(opts);    
     
     return 0;

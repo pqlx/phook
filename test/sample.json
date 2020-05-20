@@ -11,7 +11,8 @@
         
         {
             "target_offset": "target",
-            "hook_offset": "hook"
+            "hook_offset": "hook",
+            "mode": "detour"
         }
     ]
 

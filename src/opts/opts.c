@@ -232,6 +232,7 @@ opts_t *read_opts_json(char* json_buf)
         cJSON_ArrayForEach(iterator, acc)
         {
             size_t offset_value;
+            cJSON* mode;
 
             if(!cJSON_IsObject(iterator))
             {
@@ -240,8 +241,29 @@ opts_t *read_opts_json(char* json_buf)
 
             hook = calloc(1, sizeof *result->hooks);
             
-            /* TODO make it set-able */
-            hook->mode = HOOK_REPLACE; 
+            
+            if( (mode = cJSON_GetObjectItemCaseSensitive(iterator, "mode")) == NULL)
+            {
+                /* Default to a replacing hook */
+                hook->mode = HOOK_REPLACE;
+            }
+            else
+            {
+                if(cJSON_IsString(mode))
+                {
+                    if(!strcasecmp(mode->valuestring, "replace"))
+                        hook->mode = HOOK_REPLACE;
+                    else if(!strcasecmp(mode->valuestring, "detour"))
+                        hook->mode = HOOK_DETOUR;
+                    else
+                        parsing_error("\"hooks\": element `%lu`: \"mode\" should either be \"replace\" or \"detour\", got \"%s\".\n", iterator_idx, mode->valuestring);
+                }
+
+                else
+                {
+                    parsing_error("\"hooks\": element `%lu`: \"mode\" not [string].\n", iterator_idx);
+                }
+            }
 
             hook_entry = cJSON_GetObjectItemCaseSensitive(iterator, "target_offset");
             json_parse_generic_offset(&hook->target_offset, hook_entry, iterator_idx);

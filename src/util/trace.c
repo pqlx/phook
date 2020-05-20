@@ -6,10 +6,12 @@
 #include "trace.h"
 #include "richtext.h"
 
-uint64_t ptrace_read_u64(pid_t pid, void* addr)
-{
-    return ptrace(PTRACE_PEEKDATA, pid, addr, NULL);
-}
+/*
+ * TODO maybe abstrace the read_write_uxx and get_set_uxx
+ * functionality, since they are the same thing with a diff. flag.
+ * Either way it's not really a big deal. 
+ * */
+
 
 uint64_t ptrace_read_write_u64(pid_t pid, void* addr, uint64_t value)
 {
@@ -19,9 +21,9 @@ uint64_t ptrace_read_write_u64(pid_t pid, void* addr, uint64_t value)
 
     uint64_t data, new;
 
-    data = new = ptrace(PTRACE_PEEKDATA, pid, addr, NULL);
+    data = new = ptrace_read_u64(pid, addr);
     new = value;
-    ptrace(PTRACE_POKEDATA, pid, addr, new);
+    ptrace_write_u64(pid, addr, new);
 
     return data;
 }
@@ -30,10 +32,10 @@ uint64_t ptrace_read_write_u32(pid_t pid, void* addr, uint32_t value)
 {
     uint64_t data, new; 
     
-    data = new = ptrace(PTRACE_PEEKDATA, pid, addr, NULL);
+    data = new = ptrace_read_u64(pid, addr);
     new  &= 0xffffffff00000000;
     new  |= value;
-    ptrace(PTRACE_POKEDATA, pid, addr, new);
+    ptrace_write_u64(pid, addr, new);
 
     return data;
 }
@@ -42,10 +44,10 @@ uint64_t ptrace_read_write_u16(pid_t pid, void* addr, uint16_t value)
 {
     uint64_t data, new;
     
-    data = new = ptrace(PTRACE_PEEKDATA, pid, addr, NULL);
+    data = new = ptrace_read_u64(pid, addr);
     new &= 0xffffffffffff0000;
     new |= value;
-    ptrace(PTRACE_POKEDATA, pid, addr, new);
+    ptrace_write_u64(pid, addr, new);
 
     return data;
 }
@@ -54,14 +56,64 @@ uint64_t ptrace_read_write_u8(pid_t pid, void* addr, uint8_t value)
 {
     uint64_t data, new;
 
-    data = new = ptrace(PTRACE_PEEKDATA, pid, addr, NULL);
+    data = new = ptrace_read_u64(pid, addr);
     new &= 0xffffffffffffff00;
     new |= value;
-    ptrace(PTRACE_POKEDATA, pid, addr, new);
+    ptrace_write_u64(pid, addr, new);
 
     return data;
 }
 
+/*
+ * The following routines take an offset denoting the register,
+ * these are found in <sys/reg.h>.
+ * */ 
+
+uint64_t ptrace_get_set_reg_u64(pid_t pid, uint64_t offset, uint64_t value)
+{
+    uint64_t data;
+    
+    data = ptrace_get_reg_u64(pid, offset);
+    ptrace_set_reg_u64(pid, offset, value);
+
+    return data;
+}
+
+uint64_t ptrace_get_set_reg_u32(pid_t pid, uint64_t offset, uint32_t value)
+{
+    uint64_t data, new;
+    
+    data = new = ptrace_get_reg_u64(pid, offset);
+    new &= 0xffffffff00000000;
+    new |= value;
+    ptrace_set_reg_u64(pid, offset, new);
+    
+    return data;
+}
+
+uint64_t ptrace_get_set_reg_u16(pid_t pid, uint64_t offset, uint16_t value)
+{
+    uint64_t data, new;
+    
+    data = new = ptrace_get_reg_u64(pid, offset);
+    new &= 0xffffffffffff0000;
+    new |= value;
+    ptrace_set_reg_u64(pid, offset, new);
+    
+    return data;
+}
+
+uint64_t ptrace_get_set_reg_u8 (pid_t pid, uint64_t offset, uint8_t  value)
+{
+    uint64_t data, new;
+
+    data = new = ptrace_get_reg_u64(pid, offset);
+    new &= 0xffffffffffffff00;
+    new |= value;
+    ptrace_set_reg_u64(pid, offset, new);
+
+    return data;
+}
 
 #define print_reg_128(regs, reg, base, offset) printf(TERM_COLOR_RED "%-12s" TERM_COLOR_CYAN "0x%.16llx%.16llx\n" TERM_RESET, \
         "$" #reg ":", \
@@ -146,7 +198,8 @@ void print_fpregs(struct user_fpregs_struct* fregs)
 
 /*
  * Inefficient but easy register state operations.
- * If we need performance, use POKEUSER and PEEKUSER
+ * If we need performance, use POKEUSER and PEEKUSER,
+ * exposed via ptrace_set_reg_uxx and ptrace_get_reg_u64,
  * to only write/read to the affected registers 
  * */
 
@@ -277,6 +330,9 @@ void ptrace_execute_shellcode(pid_t pid, const uint8_t* shellcode, size_t n, voi
 
     memcpy(final_shellcode, shellcode, n);
     memcpy(&final_shellcode[n], epilogue, sizeof epilogue);
-     
+    
+    
+
+    free(final_shellcode);
 
 }

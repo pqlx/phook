@@ -35,12 +35,15 @@ opts_t *read_opts_file(char* filename)
                 offset_value = strtoll(&(ENTRY)->valuestring[2], NULL, 16); \
             } \
             else \
-            offset_value = (size_t)((ENTRY)->valuestring); \
+                offset_value = (size_t)((ENTRY)->valuestring); \
         } \
         else \
-        offset_value = (size_t) ((ENTRY)->valueint); \
+            offset_value = (size_t) ((ENTRY)->valueint); \
         (DEST)->type = is_string ? OFFSET_SYMBOL : OFFSET_RAW; \
-        (DEST)->raw  = is_string ? (size_t)strdup((char*)offset_value) : offset_value; \
+        if(is_string) \
+            (DEST)->symbol = strdup((char*)offset_value); \
+        else \
+            (DEST)->raw = offset_value; \
     } while(0);
 
 opts_t *read_opts_json(char* json_buf)
@@ -134,7 +137,6 @@ opts_t *read_opts_json(char* json_buf)
         free(result->target_executable.argv[0]);
 
         result->target_executable.argv[0] = real_path;
-
         result->target_executable.path = strdup(result->target_executable.argv[0]);
 
     }

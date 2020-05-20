@@ -11,10 +11,8 @@ typedef struct generic_offset {
         OFFSET_SYMBOL = 0x01
     } type;
 
-    union {
-        char* symbol;
-        size_t raw;
-    };
+    char* symbol;
+    size_t raw;
 
 } generic_offset_t;
 

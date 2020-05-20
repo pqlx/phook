@@ -49,6 +49,10 @@ typedef struct active_hook {
     void* target_address;
     void* hook_address;
     
+    /* Set if the addresses are backed by a symbol */
+    char* target_symbol;
+    char* hook_symbol;
+
     uint8_t replaced_opcode; /* The opcode at `target_adress` that we've overwritten. */
     size_t n_triggered; /* times triggered in total. */
     bool is_active;     /* whether this hook is placed. */

@@ -1,16 +1,33 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/ptrace.h>
 #include <unistd.h>
 #include <sys/wait.h>
 
+
 #include "hook.h"
 #include "util/trace.h"
+#include "util/richtext.h"
 
-pid_t spawn_child(opts_t*);
-void execute_inferior(char*, char**, char**);
 
-void apply_hooks(inferior_t*, hook_target_t*);
+inferior_t* create_inferior(opts_t* opts, elf_file_t* target, elf_file_t* inject_lib)
+{
+    pid_t child_pid = spawn_child(opts);
+    int status;
+    inferior_t* result;
+
+    waitpid(child_pid, &status, 0);
+
+    result = calloc(1, sizeof *result);
+    result->pid = child_pid;
+    result->target = target;
+    result->inject_lib = inject_lib;
+    result->mappings = fetch_mappings_for(child_pid);
+    return result;
+
+}
+
 
 void start_hook(opts_t* opts)
 {
@@ -32,26 +49,12 @@ void start_hook(opts_t* opts)
         exit(1);
     }
     
-    pid_t child_pid = spawn_child(opts);
-    
-    int status;
-    
-    /* catch at execve() */
-    waitpid(child_pid, &status, 0);    
-    
-    inferior_t* inferior;
-
-    inferior = calloc(1, sizeof *inferior);
-    
-    inferior->pid = child_pid;
-    
-    inferior->target = target;
-    inferior->inject_lib = inject_lib;
-    
-    inferior->mappings = fetch_mappings_for(inferior->pid);
+    inferior_t* inferior = create_inferior(opts, target, inject_lib);
 
     if(target->info->link_type == LINK_DYNAMIC)
     {
+        //inject_library(inferior);
+
         apply_hooks(inferior, opts->hooks);
     }
     else
@@ -59,8 +62,10 @@ void start_hook(opts_t* opts)
         fprintf(stderr, "There is no support for statically linked executables as of now.\n");
         exit(1);
     }
+    
+    print_active_hooks(inferior->hooks);
 
-    ptrace(PTRACE_CONT, child_pid, NULL, NULL);
+    ptrace(PTRACE_CONT, inferior->pid, NULL, NULL);
 
 }
 
@@ -118,10 +123,12 @@ void apply_hooks(inferior_t* inferior, hook_target_t* pending)
         
         current->mode           = pending->mode;
         current->target_address = target_address;
-        
+        current->target_symbol  = pending->target_offset.symbol == NULL ? NULL : strdup(pending->target_offset.symbol);
+
         /* This one is currently not based, we will do that once the first trap is hit. */
         current->hook_address = (void*)pending->hook_offset.raw;
-        
+        current->hook_symbol  = pending->hook_offset.symbol == NULL ? NULL : strdup(pending->hook_offset.symbol);
+
         current->n_triggered = 0; 
         
         write_hook(inferior, current);
@@ -133,8 +140,6 @@ void apply_hooks(inferior_t* inferior, hook_target_t* pending)
         pending = pending->next;
     }
 }
-
-
 
 pid_t spawn_child(opts_t* opts)
 {
@@ -161,3 +166,32 @@ void execute_inferior(char* path, char** argv, char** envp)
     ptrace(PTRACE_TRACEME, 0, NULL, NULL);
     execve(path, argv, envp);
 }
+
+void print_active_hook(active_hook_t* hook)
+{
+    printf("Hook at:    %p", hook->target_address);
+    if(hook->target_symbol)
+        printf(" (%s)", hook->target_symbol);
+    putchar('\n');
+
+    printf("Points to:  %p", hook->hook_address);
+    if(hook->hook_symbol)
+        printf(" (%s)", hook->hook_symbol);
+    
+    puts("\n");
+
+    printf("Is enabled: %s" TERM_RESET "\n", hook->is_active ? TERM_COLOR_GREEN "TRUE" : TERM_COLOR_RED "FALSE");
+    printf("Replaced opcode: %.2x\n", hook->replaced_opcode);
+}
+
+void print_active_hooks(active_hook_t* hook)
+{
+    while(hook)
+    {
+        print_active_hook(hook);
+        putchar('\n');
+        hook = hook->next;
+    }
+}
+
+

@@ -70,4 +70,15 @@ typedef struct inferior {
     mapping_t** mappings;
 } inferior_t;
 
+
+void inject_library(inferior_t*);
 void start_hook(opts_t*);
+
+inferior_t* create_inferior(opts_t*, elf_file_t*, elf_file_t*);
+pid_t spawn_child(opts_t*);
+void execute_inferior(char*, char**, char**);
+
+void apply_hooks(inferior_t*, hook_target_t*);
+
+void print_active_hook(active_hook_t*);
+void print_active_hooks(active_hook_t*);

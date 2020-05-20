@@ -86,6 +86,10 @@ void start_hook(opts_t* opts)
     }
     
     print_active_hooks(inferior->hooks);
+    
+    struct user_aregs_struct* state = ptrace_get_aregs(inferior->pid);
+
+    print_aregs(state); 
 
     ptrace(PTRACE_CONT, inferior->pid, NULL, NULL);
 

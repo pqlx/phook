@@ -83,3 +83,25 @@ uint8_t* read_binary_file(char* filename, size_t* dest_size)
     *dest_size = file_len;
     return contents;
 }
+
+char** strarray_append(char** array, char* to_append)
+{
+    char** counter = array;
+    size_t n;
+
+    while(*counter)
+        counter++;
+    
+    n = (counter - array)/(sizeof *array);
+
+    array = realloc(array, (n + 2) * sizeof(*array));
+
+    array[n] = to_append;
+    return array; 
+}
+
+void strarray_free(char** array)
+{
+    while(*array)
+        free(*array++);
+}

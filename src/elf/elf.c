@@ -37,6 +37,40 @@ void elf_file_free(elf_file_t* elf)
     free(elf->path);
 }
 
+func_symbol_t* get_symbols_from_section(Elf* elf, GElf_Shdr* shdr, Elf_Scn* section)
+{
+    Elf_Data* data;
+    size_t n_entries;
+    
+    data = elf_getdata(section, NULL);
+
+    n_entries = shdr->sh_size / shdr->sh_entsize;
+
+    func_symbol_t* result = NULL, *current;
+    for(int i = 0; i < n_entries; ++i)
+    {
+        GElf_Sym symbol;
+        gelf_getsym(data, i, &symbol);
+        
+         if( ELF64_ST_TYPE(symbol.st_info) == STT_FUNC && symbol.st_value != 0)
+         {
+             current = calloc(1, sizeof *current);
+             
+             /* Make a copy of the string in the symbol table */
+             current->identifier = strdup( 
+                     elf_strptr(elf, shdr->sh_link, symbol.st_name)
+                     );
+                
+             current->value = symbol.st_value;
+             current->next = result;
+             result = current;
+         }
+
+    }
+
+    return result;
+}
+
 elf_info_t* elf_process_fd(int fd)
 {
     /* Support reading from a raw fd directly.
@@ -46,9 +80,8 @@ elf_info_t* elf_process_fd(int fd)
 
 
     Elf       *elf;
-    Elf_Scn   *section = NULL;
+    Elf_Scn   *section = NULL, *symtab = NULL, *dynsym = NULL;
     GElf_Shdr section_header;
-    bool      found;
     
     elf_info_t* result = NULL;
    
@@ -60,53 +93,40 @@ elf_info_t* elf_process_fd(int fd)
         return NULL;   
     }
     
-    /* Loop over sections until a symbol section is found */
-    found  = false;
     while( (section = elf_nextscn(elf, section)) != NULL)
     {
         gelf_getshdr(section, &section_header); 
-        if(section_header.sh_type == SHT_SYMTAB)
+        if(!symtab && section_header.sh_type == SHT_SYMTAB)
         {
-            found = true;
-            break;
+            symtab = section;
         }
+
+        else if(!dynsym && section_header.sh_type == SHT_DYNSYM)
+        {
+            dynsym = section;
+        }
+        if(dynsym && symtab)
+            break;
     }
     
     result = calloc(1, sizeof *result); 
-    if(found)
-    { 
-  
-        Elf_Data *data;
-        size_t n_entries;
     
-        /* Fetch the symbol section we found earlier */ 
-        data = elf_getdata(section, NULL);
-        n_entries = section_header.sh_size / section_header.sh_entsize;
-   
 
-        func_symbol_t *current;
-        for(int i = 0; i < n_entries; ++i)
-        {
-            GElf_Sym symbol;
-            gelf_getsym(data, i, &symbol);
-        
-            /* Check if the current symbol is 1. a function and 2. not a relocation,
-            * i.e the code is not just a procedure linkage table stub 
-            * */
-            if( ELF64_ST_TYPE(symbol.st_info) == STT_FUNC && symbol.st_value != 0)
-            {
-                current = calloc(1, sizeof *current);
-             
-                /* Make a copy of the string in the symbol table */
-                current->identifier = strdup( 
-                     elf_strptr(elf, section_header.sh_link, symbol.st_name)
-                     );
-             
-                current->value = symbol.st_value;
-                current->next = result->func_symbols;
-                result->func_symbols = current;
-            }
-        }
+    func_symbol_t* symbols;
+    
+    gelf_getshdr(dynsym, &section_header);
+
+    if(dynsym)
+        result->func_symbols = get_symbols_from_section(elf, &section_header, dynsym);
+    
+    gelf_getshdr(symtab, &section_header);
+    symbols = get_symbols_from_section(elf, &section_header, symtab);
+    if(symtab)
+    {
+        if(!result->func_symbols)
+            result->func_symbols = symbols;
+        else
+            result->func_symbols->next = symbols;
     }
    
     GElf_Phdr program_header;

@@ -122,14 +122,15 @@ inferior_t* do_hook_dynamic(opts_t* opts, elf_file_t* target, elf_file_t* inject
         }
         envp++;
     }
-
+    
     /* Else, simply append to array. */
     if(!is_resolved)
     {
         /* 11 for "LD_PRELOAD=", 1 for null byte */
         char* ld_preload = malloc(11 + strlen(inject_lib->path) + 1); 
         sprintf(ld_preload, "LD_PRELOAD=%s", inject_lib->path);
-        
+      
+
         opts->target_executable.envp = strarray_append(opts->target_executable.envp, ld_preload);
     }
     
@@ -297,6 +298,11 @@ void do_hook_loop(inferior_t* inferior)
                     /* Execute the first instruction again */
                     ptrace(PTRACE_SINGLESTEP, inferior->pid, 0, 0);
                     
+                    /* Make sure to wait for the next interrupt
+                     * we will run into problems with our waitpid
+                     * loop if we don't do this! */ 
+                    waitpid(inferior->pid, NULL, 0);
+
                     /* Restore trap op */ 
                     ptrace_read_write_u8(inferior->pid, (void*)active_hook->detour_state->regs.rip, TRAP_OP);
                     
@@ -351,6 +357,8 @@ void start_hook(opts_t* opts)
         printf("Something went terribly wrong....\n\n");
         exit(1); 
     };
+    
+    printf("Child has spawned, pid: %d\n\n", inferior->pid);
 
     apply_hooks(inferior, opts->hooks);
     
@@ -459,9 +467,13 @@ void execute_inferior(char* path, char** argv, char** envp)
     /*
      * To be called in the child process.
      * */
-
+    
     ptrace(PTRACE_TRACEME, 0, NULL, NULL);
     execve(path, argv, envp);
+
+    fputs("Failed to execve()!\n", stderr);
+    fputs("Terminating...\n", stderr);
+    exit(1);
 }
 
 

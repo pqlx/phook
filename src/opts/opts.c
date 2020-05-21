@@ -244,8 +244,10 @@ opts_t *read_opts_json(char* json_buf)
             
             if( (mode = cJSON_GetObjectItemCaseSensitive(iterator, "mode")) == NULL)
             {
-                /* Default to a replacing hook */
-                hook->mode = HOOK_REPLACE;
+                /* Default to a detour hook. 
+                 * Detour hooks should work in every scenario, 
+                 * whilst replace hooks only works before a stack frame is set up. */
+                hook->mode = HOOK_DETOUR;
             }
             else
             {
@@ -372,8 +374,7 @@ void print_opts(opts_t *opts)
     if(opts->target_executable.argv)
         while(opts->target_executable.argv[i])
             printf("\t\"" TERM_STYLE_DIM "%s" TERM_RESET "\"\n", opts->target_executable.argv[i++]);
-    
-
+   
     puts( TERM_STYLE_BOLD TERM_COLOR_MAGENTA "envp:" TERM_RESET);
     i = 0;
 

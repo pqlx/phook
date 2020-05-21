@@ -273,7 +273,7 @@ void ptrace_print_state(pid_t pid)
     
     ptrace_print_hexdump(pid, (void*)state->regs.rsp, 80, 8, 1);
 
-    printf("\n\nInstruction pointer:\n");
+    printf("\n\nInstruction pointer (minus one): \n");
 
     ptrace_print_hexdump(pid, (void*)state->regs.rip - 1, 80, 1, 8);
 

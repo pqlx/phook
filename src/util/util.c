@@ -41,6 +41,7 @@ char* read_text_file_procfs(char* filename)
     if( (handle = fopen(filename, "r")) == NULL)
     {
         perror("fopen");
+        printf("File: %s\n", filename);
         exit(1);
     }
 
@@ -94,6 +95,7 @@ char** strarray_append(char** array, char* to_append)
     array = realloc(array, (n + 2) * sizeof(*array));
 
     array[n] = to_append;
+    array[n + 1] = NULL;
     return array; 
 }
 

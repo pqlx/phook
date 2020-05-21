@@ -2,6 +2,6 @@
 
 int hook(void)
 {
-    puts("Hit hook!");
+    puts("`hook` called.");
     return 1;
 }

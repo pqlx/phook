@@ -1,6 +1,6 @@
 {
     "target_executable": {
-        "exec": ["test/build/target_dynamic"],
+        "exec": ["test/build/target_dynamic", "arg1", "arg2"],
         "env": {
             "TEST_ENV": "A",
             "TEST_ENV_2": "B"

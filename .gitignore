@@ -1,3 +1,4 @@
 *.swp
 phook
 test/build
+configs/

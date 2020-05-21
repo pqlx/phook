@@ -21,7 +21,8 @@ As of now, `phook` only supports loading information from a JSON configuration f
         "env": {
             "TEST_ENV": "A",
             "TEST_ENV_2": "B"
-        }
+        },
+        "is_pie": true
     },
     "to_inject": "test/build/inject.so",
     "hooks": [

@@ -4,7 +4,8 @@
         "env": {
             "TEST_ENV": "A",
             "TEST_ENV_2": "B"
-        }
+        },
+        "is_pie": true
     },
     "to_inject": "test/build/inject.so",
     "hooks": [

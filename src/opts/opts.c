@@ -58,7 +58,7 @@ opts_t *read_opts_json(char* json_buf)
     
     cJSON*  hook_entry;
     cJSON*  acc;
-    
+    cJSON*  pie; 
     bool is_string;
     
     char* real_path;
@@ -200,12 +200,37 @@ opts_t *read_opts_json(char* json_buf)
         parsing_error("\"env\": not [object]\n");
     }
     
+    if( (pie = cJSON_GetObjectItemCaseSensitive(target, "is_pie")) == NULL)
+    {
+        result->target_executable.is_pie = true;
+    }
+    else
+    {
+
+    
+        if(cJSON_IsTrue(pie))
+        {
+            result->target_executable.is_pie = true;
+        }
+        else if(cJSON_IsFalse(pie))
+        {
+            result->target_executable.is_pie = false;
+        }
+        else
+        {
+            parsing_error("\"is_pie\": not [bool].\n");
+
+        }
+        
+    }
+
+    
 
     acc = cJSON_GetObjectItemCaseSensitive(parsed, "to_inject");
 
     if(!cJSON_IsString(acc))
     {
-        parsing_error("\"to_inject\": either missing or not [string]\n");
+        parsing_error("\"to_inject\": either missing or not [string].\n");
     }
     
     if( (result->to_inject_path = realpath(acc->valuestring, NULL)) == NULL)

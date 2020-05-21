@@ -21,7 +21,6 @@ typedef struct elf_info {
     } link_type;
 
     char* interpreter;
-
 } elf_info_t;
 
 typedef struct elf_file {

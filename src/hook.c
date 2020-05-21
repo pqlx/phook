@@ -25,6 +25,7 @@ inferior_t* create_inferior(opts_t* opts, elf_file_t* target, elf_file_t* inject
     result->target = target;
     result->inject_lib = inject_lib;
     result->mappings = fetch_mappings_for(child_pid);
+    result->is_pie = opts->target_executable.is_pie;
     return result;
 
 }
@@ -429,8 +430,12 @@ void apply_hooks(inferior_t* inferior, hook_target_t* pending)
         current->mode           = pending->mode;
         current->target_address = target_address;
         current->target_symbol  = pending->target_offset.symbol == NULL ? NULL : strdup(pending->target_offset.symbol);
+        
+        current->hook_address = (void*)pending->hook_offset.raw;
+        
 
-        current->hook_address = (void*)(pending->hook_offset.raw + (lib_mapping ? lib_mapping->lower_bound : 0));
+        if(lib_mapping && inferior->is_pie)
+            current->hook_address += (size_t)lib_mapping->lower_bound;
         
         current->hook_symbol  = pending->hook_offset.symbol == NULL ? NULL : strdup(pending->hook_offset.symbol);
 

@@ -47,8 +47,10 @@ typedef struct opts {
         char** argv;     /* argv - will NOT always be set */
         char** envp;     /* envp - will NOT always be set */
         
+        /* TODO detect this instead of making it an user-supplied value */
+        bool is_pie;     /* is position independent executable */  
     } target_executable;
-
+    
     /* Path of the library we will inject; 
      * This will contain all our hooks */
     char* to_inject_path;

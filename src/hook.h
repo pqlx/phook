@@ -73,6 +73,9 @@ typedef struct inferior {
     elf_file_t* inject_lib;
     
     mapping_t** mappings;
+
+    bool is_pie;
+
 } inferior_t;
 
 

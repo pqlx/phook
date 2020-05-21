@@ -6,6 +6,7 @@
 
 #include "trace.h"
 #include "richtext.h"
+#include "util.h"
 
 /*
  * TODO maybe abstrace the read_write_uxx and get_set_uxx
@@ -250,21 +251,66 @@ void ptrace_set_fpregs(pid_t pid, struct user_fpregs_struct* fpregs)
     ptrace(PTRACE_SETFPREGS, pid, NULL, fpregs);
 }
 
+void ptrace_print_hexdump(pid_t pid, void* address, size_t n, size_t granularity, size_t n_columns)
+{
+    uint8_t* buffer = calloc(1, n);
+    
+
+    ptrace_memcpy_from(pid, buffer, address, n);
+     
+
+    print_hexdump(buffer, n, granularity, n_columns, (size_t)address);
+    free(buffer);
+}
+
+void ptrace_print_state(pid_t pid)
+{
+    struct user_aregs_struct* state = ptrace_get_aregs(pid);
+
+    print_aregs(state);
+
+    printf("\n\nStack: \n");
+    
+    ptrace_print_hexdump(pid, (void*)state->regs.rsp, 80, 8, 1);
+
+    printf("\n\nInstruction pointer:\n");
+
+    ptrace_print_hexdump(pid, (void*)state->regs.rip - 1, 80, 1, 8);
+
+    free(state);
+}
+
+
 void ptrace_memcpy_from(pid_t pid, uint8_t* dest, void* src, size_t n)
 {
+    size_t amt;
     while(n != 0)
     {
         if(n >= 8)
-            n -= sizeof (*(uint64_t*)dest++ = (uint64_t)ptrace_read_u64(pid, (uint64_t*)src++));
-        
+        {
+            *(uint64_t*)dest = (uint64_t)ptrace_read_u64(pid, src);
+            amt = 8;
+        }
+
         else if(n >= 4)
-            n -= sizeof (*(uint32_t*)dest++ = (uint32_t)ptrace_read_u64(pid, (uint32_t*)src++)); 
+        {
+            *(uint32_t*)dest = (uint32_t)ptrace_read_u64(pid, src); 
+            amt = 4;
+        }
 
         else if(n >= 2)
-            n -= sizeof (*(uint16_t*)dest++ = (uint16_t)ptrace_read_u64(pid, (uint16_t*)src++));
+        {
+            *(uint16_t*)dest = (uint16_t)ptrace_read_u64(pid, src);
+            amt = 2;
+        }
         else
-            n -= sizeof (*(uint8_t*) dest++ = (uint8_t)ptrace_read_u64(pid, (uint16_t*)src++));
-            
+        {
+            *(uint8_t*)dest = (uint8_t)ptrace_read_u64(pid, src);
+            amt = 1;
+        }
+        n -= amt;
+        src += amt;
+        dest += amt;
     }
 } 
 
@@ -364,5 +410,4 @@ void ptrace_execute_shellcode(pid_t pid, const uint8_t* shellcode, size_t n)
 
     free(final_shellcode);
     free(old_data);
-
 }

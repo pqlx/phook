@@ -5,6 +5,7 @@
 #include "opts/opts.h"
 #include "elf/elf.h"
 #include "hook.h"
+#include "util/util.h"
 
 void usage(void)
 {

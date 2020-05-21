@@ -205,6 +205,7 @@ void do_hook_loop(inferior_t* inferior)
         if( prev_op != TRAP_OP)
         {
             printf("Major warning: byte at %p is not %.2x but %.2x\n", rip, TRAP_OP, prev_op);
+            ptrace_print_state(inferior->pid); 
             continue;
         }
 

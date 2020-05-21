@@ -102,3 +102,39 @@ void strarray_free(char** array)
     while(*array)
         free(*array++);
 }
+
+void print_hexdump(uint8_t* bytes, size_t n, size_t granularity, size_t n_columns, size_t base_addr)
+{
+    /* Print a nice hexdump of a target buffer.
+     * granularity: amount of bytes per element
+     * n_columns: amount of elements per row
+     * */
+    
+    /* Round down to previous power of two */  
+    while(granularity & (granularity - 1))
+        granularity &= (granularity - 1);
+
+    /* Round to lowest multiple of `granularity` */ 
+    n &= ~(granularity - 1);
+    
+    size_t n_values = n / granularity;
+     
+    printf("%.16llx: ", (long long unsigned)base_addr);
+
+    for(size_t i = 0; i < n_values; ++i)
+    {
+        printf("0x");
+        for(int j = 0; j < granularity; ++j)
+        {
+            printf("%.2hhx", bytes[(i + 1)*granularity - (j + 1)]);
+        }
+        putchar(' ');
+        
+        if( (i + 1) % n_columns == 0)
+        {
+            printf("\n%.16llx: ", (unsigned long long)(base_addr + (i + 1) * granularity));
+        }
+
+    }
+
+}

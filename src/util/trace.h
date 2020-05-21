@@ -56,6 +56,10 @@ void ptrace_set_regs(pid_t, struct user_regs_struct*);
 struct user_fpregs_struct* ptrace_get_fpregs(pid_t);
 void ptrace_set_fpregs(pid_t, struct user_fpregs_struct*);
 
+void ptrace_print_hexdump(pid_t, void*, size_t, size_t, size_t);
+
+void ptrace_print_state(pid_t);
+
 void ptrace_memcpy_from(pid_t, uint8_t*, void*, size_t);
 void ptrace_memcpy_to(pid_t, void*, const uint8_t*, size_t, uint8_t*);
 void ptrace_execute_shellcode(pid_t, const uint8_t*, size_t);

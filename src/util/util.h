@@ -9,3 +9,5 @@ uint8_t* read_binary_file(char*, size_t*);
 
 char** strarray_append(char**, char*);
 void strarray_free(char**);
+
+void print_hexdump(uint8_t*, size_t, size_t, size_t, size_t);

@@ -7,6 +7,8 @@
 Function hooking is the act of intercepting function calls and running alternative code instead of or before the existing function. 
 This can be useful in a variety of scenarios. Think of debugging closed-source code, tracing function calls, et cetera. 
 
+![phook being used to trace malloc() calls in /bin/ls](/img/phook_malloc_trace.png)
+
 
 ## Usage
 

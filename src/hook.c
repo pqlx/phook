@@ -2,9 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ptrace.h>
-#include <unistd.h>
 #include <sys/wait.h>
-
+#include <unistd.h>
 
 #include "hook.h"
 #include "util/trace.h"
@@ -390,14 +389,15 @@ void apply_hooks(inferior_t* inferior, hook_target_t* pending)
     if( (target_last_mapping  = resolve_mapping_byfile(inferior->target->path, inferior->mappings, false)) == NULL)
     {
         fprintf(stderr, "Could not resolve executable mapping in child [end].\n");
+        exit(1);
     }
     
     
 
     inferior->lib_needs_rebase = !(lib_mapping = resolve_mapping_byfile(inferior->inject_lib->path, inferior->mappings, true));
-    
-    void *target_base = target_first_mapping->lower_bound;
-    void *target_end  = target_last_mapping->upper_bound;
+     
+    void* target_base = target_first_mapping->lower_bound;
+    void* target_end = target_last_mapping->upper_bound;
 
     while(pending)
     {
@@ -415,12 +415,23 @@ void apply_hooks(inferior_t* inferior, hook_target_t* pending)
             exit(1);
         }
 
-        void* target_address = target_base + pending->target_offset.raw;
+        void* target_address = (void*)pending->target_offset.raw;
         
+        if(inferior->is_pie)
+            target_address += (size_t)target_base;
+
         if(target_address < target_base || target_address > target_end)
         {
             fprintf(stderr, "Target is mapped from %p - %p -- hook offset resolves out of bounds: to %p\n", target_base, target_end, target_address);
             
+            fprintf(stderr, "Relevant offset: ");
+            
+            if(pending->target_offset.symbol)
+                fprintf(stderr, "%s (%lx)\n", pending->target_offset.symbol, pending->target_offset.raw);
+            else
+                fprintf(stderr, "%lx\n", pending->target_offset.raw);
+
+
             exit(1);
         }
 
@@ -434,7 +445,7 @@ void apply_hooks(inferior_t* inferior, hook_target_t* pending)
         current->hook_address = (void*)pending->hook_offset.raw;
         
 
-        if(lib_mapping && inferior->is_pie)
+        if(lib_mapping)
             current->hook_address += (size_t)lib_mapping->lower_bound;
         
         current->hook_symbol  = pending->hook_offset.symbol == NULL ? NULL : strdup(pending->hook_offset.symbol);

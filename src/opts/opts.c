@@ -1,7 +1,7 @@
+#include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <libgen.h>
 
 #include "opts.h"
 #include "../lib/cjson/cJSON.h"
@@ -22,29 +22,27 @@ opts_t *read_opts_file(char* filename)
     return result;
 }
 
-#define json_parse_generic_offset(DEST, ENTRY, IDX) \
-    do { \
-        is_string = cJSON_IsString(ENTRY); \
-        if(!is_string && !cJSON_IsNumber(ENTRY)) \
-        parsing_error("\"hooks\", element `%lu`: \"%s\" either missing or not [string, number].\n", IDX, (ENTRY)->string); \
-        if(is_string) \
-        { \
-            if(!strncmp( (ENTRY)->valuestring, "0x", 2)) \
-            { \
-                is_string = false; \
-                offset_value = strtoll(&(ENTRY)->valuestring[2], NULL, 16); \
-            } \
-            else \
-                offset_value = (size_t)((ENTRY)->valuestring); \
-        } \
-        else \
-            offset_value = (size_t) ((ENTRY)->valueint); \
-        (DEST)->type = is_string ? OFFSET_SYMBOL : OFFSET_RAW; \
-        if(is_string) \
-            (DEST)->symbol = strdup((char*)offset_value); \
-        else \
-            (DEST)->raw = offset_value; \
-    } while(0);
+#define json_parse_generic_offset(DEST, ENTRY, IDX)                            \
+  do {                                                                         \
+    is_string = cJSON_IsString(ENTRY);                                         \
+    if (!is_string && !cJSON_IsNumber(ENTRY))                                  \
+      parsing_error("\"hooks\", element `%lu`: \"%s\" either missing or not "  \
+                    "[string, number].\n",                                     \
+                    IDX, (ENTRY)->string);                                     \
+    if (is_string) {                                                           \
+      if (!strncmp((ENTRY)->valuestring, "0x", 2)) {                           \
+        is_string = false;                                                     \
+        offset_value = strtoll(&(ENTRY)->valuestring[2], NULL, 16);            \
+      } else                                                                   \
+        offset_value = (size_t)((ENTRY)->valuestring);                         \
+    } else                                                                     \
+      offset_value = (size_t)((ENTRY)->valueint);                              \
+    (DEST)->type = is_string ? OFFSET_SYMBOL : OFFSET_RAW;                     \
+    if (is_string)                                                             \
+      (DEST)->symbol = strdup((char *)offset_value);                           \
+    else                                                                       \
+      (DEST)->raw = offset_value;                                              \
+  } while (0);
 
 opts_t *read_opts_json(char* json_buf)
 {
@@ -93,7 +91,7 @@ opts_t *read_opts_json(char* json_buf)
         if( (result->target_executable.path = realpath(exec_list->valuestring, NULL)) == NULL)
         {
             perror("realpath");
-            fprintf(stderr, "File: %s\n", exec_list->valuestring);
+            fprintf(stderr, "Target executable: %s\n", exec_list->valuestring);
             exit(1);
         }
         result->target_executable.argv = malloc(sizeof(char*) * 2);
@@ -130,7 +128,7 @@ opts_t *read_opts_json(char* json_buf)
         if( (real_path = realpath(result->target_executable.argv[0], NULL)) == NULL )
         {
             perror("realpath");
-            fprintf(stderr, "File: %s\n", result->target_executable.argv[0]);
+            fprintf(stderr, "Target executable: %s\n", result->target_executable.argv[0]);
             exit(1);
         }
         

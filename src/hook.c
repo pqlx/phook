@@ -164,7 +164,7 @@ void do_hook_loop(inferior_t* inferior)
             }
             else
             {
-                printf("Unknown status %d received..", status);
+                printf("Unknown status %d received..\n", status);
                 ptrace(PTRACE_CONT, inferior->pid, NULL, NULL);
                 continue;
             }

@@ -147,7 +147,10 @@ void do_hook_loop(inferior_t* inferior)
     active_hook_t* active_hook;
     void* rip;
     uint8_t prev_op;
+    
+    uint8_t n_unknown = 0; 
 
+    ptrace(PTRACE_SETOPTIONS, inferior->pid, NULL, PTRACE_O_TRACEEXEC);
     while(true)
     {
         waitpid(inferior->pid, &status, 0); 
@@ -162,14 +165,39 @@ void do_hook_loop(inferior_t* inferior)
                 puts("Terminating..");
                 exit(1);
             }
+            else if(WSTOPSIG(status) == SIGCHLD)
+            {
+                printf("<PHOOK>: Child process spawned..\n");
+                ptrace(PTRACE_CONT, inferior->pid, NULL, NULL);
+                continue; 
+            }
+            else if(WIFSIGNALED(status))
+            {
+                printf("<PHOOK>: Terminated by signal %d (%s)%s\n",
+                    WTERMSIG(status),
+                    strsignal(WTERMSIG(status)),
+                    WCOREDUMP(status)?" (core dumped)":"");
+                exit(1);
+            }
             else
             {
-                printf("Unknown status %d received..\n", status);
+                printf("<PHOOK>: Unknown status %d received..\n", status);
+                
+
+                if( n_unknown++ >= 5)
+                {
+                    printf("<PHOOK> 5 consecutive unknown statuses received -- Terminating..\n");
+                    exit(1);
+                }
+                
                 ptrace(PTRACE_CONT, inferior->pid, NULL, NULL);
                 continue;
             }
         }   
         
+        /* reset the counter */
+        n_unknown = 0;
+
         /* At this point our library base address might 
          * have not been resolved yet.
          * If this is the case, we do it now, 

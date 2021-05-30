@@ -374,8 +374,10 @@ void start_hook(opts_t* opts)
             hook_func = do_hook_dynamic;
             break;
         case LINK_STATIC:
+        default:
             hook_func = do_hook_static;
             break;
+        
     }
     
     inferior_t* inferior;

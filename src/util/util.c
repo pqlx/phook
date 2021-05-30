@@ -21,7 +21,16 @@ char* read_text_file(char* filename)
     
     /* Plus 1 for null terminator */
     char* contents = malloc(file_len + 1);
-    contents[ fread(contents, 1, file_len, handle) ] = '\x00';
+
+    size_t n_read;
+
+    if( (n_read = fread(contents, 1, file_len, handle)) != file_len)
+    {
+        perror("fread");
+        exit(1);
+    }
+
+    contents[n_read] = '\x00';
 
     fclose(handle);
 
@@ -77,7 +86,11 @@ uint8_t* read_binary_file(char* filename, size_t* dest_size)
 
     uint8_t* contents = malloc(file_len);
 
-    fread(contents, 1, file_len, handle);
+    if(fread(contents, 1, file_len, handle) != file_len)
+    {
+        perror("fopen");
+        exit(1);
+    }
 
     fclose(handle);
 

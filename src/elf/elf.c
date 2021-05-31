@@ -119,7 +119,13 @@ elf_info_t* elf_process_fd(int fd)
     
     if(symtab)
         append_func_symbol(&result->func_symbols, get_symbols_from_section(elf, symtab));
-   
+    
+    
+    GElf_Ehdr file_header;
+    gelf_getehdr(elf, &file_header);
+    
+    result->pie = file_header.e_type == ET_DYN;
+    
     GElf_Phdr program_header;
     size_t phdrnum;
      

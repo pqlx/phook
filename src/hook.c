@@ -24,7 +24,7 @@ inferior_t* create_inferior(opts_t* opts, elf_file_t* target, elf_file_t* inject
     result->target = target;
     result->inject_lib = inject_lib;
     result->mappings = fetch_mappings_for(child_pid);
-    result->is_pie = opts->target_executable.is_pie;
+    result->is_pie = target->info->pie;
     return result;
 
 }

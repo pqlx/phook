@@ -63,11 +63,12 @@ typedef struct active_hook {
 
 } active_hook_t;
 
+
 typedef struct inferior {
     pid_t pid;
     
     active_hook_t* hooks;    
-    bool lib_needs_rebase;
+    bool lib_needs_rebase; /* Whether the hooks need to be rebased relative to the library location */
     
     elf_file_t* target;
     elf_file_t* inject_lib;

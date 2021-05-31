@@ -322,47 +322,53 @@ void ptrace_memcpy_to(pid_t pid, void* dest, const uint8_t* src, size_t n, uint8
      * */
     
     uint64_t value;
+    size_t c;
 
-    while(n != 0)
+    while(n > 0)
     {
         if(n >= 8)
         {
            if(old)
-                *(uint64_t*)old++ = ptrace_read_write_u64(pid, dest, *(uint64_t*)src++);
+                *((uint64_t*)old) = ptrace_read_write_u64(pid, dest, *((uint64_t*)src));
            else
-                ptrace_write_u64(pid, dest, *(uint64_t*)src++);
-
-           n -= 8;
+                ptrace_write_u64(pid, dest, *((uint64_t*)src));
+            
+           c = 8;
         }
 
         else if (n >= 4)
         {
-            value = ptrace_read_write_u32(pid, dest, *(uint32_t*)src++);
+            value = ptrace_read_write_u32(pid, dest, *((uint32_t*)src));
 
             if(old)
-                *(uint32_t*)old++ = (uint32_t)value;
-
-            n -= 4;
+                *((uint32_t*)old) = (uint32_t)value;
+            
+            c = 4;
         }
         else if (n >= 2)
         {
-            value = ptrace_read_write_u16(pid, dest, *(uint16_t*)src++);
+            value = ptrace_read_write_u16(pid, dest, *((uint16_t*)src));
 
             if(old)
-                *(uint16_t*)old++ = (uint16_t)value;
+                *((uint16_t*)old) = (uint16_t)value;
             
-            n -= 2;
+            c = 2;
         }
         else
         {
             /* n == 1 */
-            value = ptrace_read_write_u8(pid, dest, *(uint8_t*)src++);
+            value = ptrace_read_write_u8(pid, dest, *src);
 
             if(old)
-                *old++ = (uint8_t)value;
+                *old = (uint8_t)value;
             
-            n--;
+            c = 1;
         }
+        n -= c;
+        src += c;
+        dest += c;
+        if(old)
+            old += c;
     }
 }
 
@@ -375,6 +381,12 @@ void ptrace_execute_shellcode(pid_t pid, const uint8_t* shellcode, size_t n)
      * After overwriting, we PTRACE_CONT to continue execution, 
      * and upon hitting our trap, we swap our shellcode back again with
      * the original data.*/
+    
+    /*
+     * Technically we can run into trouble if it just so happens to be the case that
+     * rip is at the end of an executable page. Generally we only run shellcode
+     * at the start of the process though, so it's not something that would occur often.
+     * Still, it's advisable to write payloads that are as short as possible */
 
     char epilogue[] = { TRAP_OP };
 
@@ -398,10 +410,13 @@ void ptrace_execute_shellcode(pid_t pid, const uint8_t* shellcode, size_t n)
      * Execute the shellcode and wait for the trap
      * */
     ptrace(PTRACE_CONT, pid, NULL, NULL);
-    waitpid(pid, NULL, 0);
+    
+
+    int status;
+    waitpid(pid, &status, 0);
     
     /*
-     * Restore contents 
+     * Restore the code that we overwrote.
      * */ 
     ptrace_memcpy_to(pid, rip, old_data, final_n, NULL);
     
@@ -411,3 +426,44 @@ void ptrace_execute_shellcode(pid_t pid, const uint8_t* shellcode, size_t n)
     free(final_shellcode);
     free(old_data);
 }
+
+
+void ptrace_execute_shellcode_stateless(pid_t pid, const uint8_t* shellcode, size_t n)
+{
+    /* ptrace_execute_shellcode, but also don't clutter any registers */
+    
+    struct user_aregs_struct* state;
+    
+    state = ptrace_get_aregs(pid);
+
+    ptrace_execute_shellcode(pid, shellcode, n);
+
+    ptrace_set_aregs(pid, state);
+    
+    free(state);
+}
+
+uint64_t ptrace_execute_syscall(pid_t pid, const uint8_t* shellcode, size_t n)
+{
+    /*
+     * Execute the code that is supplied via `shellcode`.
+     * This is supposed to be a syscall stub, and the return
+     * value of this function will be the return value of the
+     * syscall (in rax) */
+
+
+    struct user_aregs_struct* state = ptrace_get_aregs(pid);
+    
+    ptrace_execute_shellcode(pid, shellcode, n);
+    
+    uint64_t return_value = ptrace_get_reg_u64(pid, RAX);
+    
+    struct user_aregs_struct* state2 = ptrace_get_aregs(pid);
+
+    ptrace_set_aregs(pid, state);
+
+    free(state);
+    return return_value;
+
+}
+

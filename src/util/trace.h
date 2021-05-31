@@ -63,3 +63,6 @@ void ptrace_print_state(pid_t);
 void ptrace_memcpy_from(pid_t, uint8_t*, void*, size_t);
 void ptrace_memcpy_to(pid_t, void*, const uint8_t*, size_t, uint8_t*);
 void ptrace_execute_shellcode(pid_t, const uint8_t*, size_t);
+void ptrace_execute_shellcode_stateless(pid_t, const uint8_t*, size_t);
+uint64_t ptrace_execute_syscall(pid_t, const uint8_t*, size_t);
+

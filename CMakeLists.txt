@@ -11,7 +11,7 @@ if (NOT CMAKE_C_COMPILER)
 endif()
 
 set(CMAKE_C_FLAGS_DEBUG "-Wall")
-set(CMAKE_C_FLAGS_RELEASE "-Wall -O3")
+set(CMAKE_C_FLAGS_RELEASE "-Wall -g")
 
 include_directories(${CMAKE_SOURCE_DIR}/src)
 

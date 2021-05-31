@@ -190,7 +190,7 @@ mapping_t *resolve_mapping_byaddr(const void* address, mapping_t** mappings)
 
     while( (mapping = *mappings++) != NULL)
     {
-        if(address >= mapping->lower_bound && address <= mapping->upper_bound)
+        if(address >= mapping->lower_bound && address < mapping->upper_bound)
             return mapping;
 
     }

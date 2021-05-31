@@ -9,7 +9,7 @@
 #include "util/trace.h"
 #include "util/richtext.h"
 #include "util/util.h"
-
+#include "loader/loader.h"
 
 inferior_t* create_inferior(opts_t* opts, elf_file_t* target, elf_file_t* inject_lib)
 {
@@ -41,14 +41,14 @@ bool inferior_rebase_lib(inferior_t* inferior)
     mapping_t* lib_mapping;
     inferior_reload_mappings(inferior);
     
-
+    /* Fetch the base address of the library */
     if( (lib_mapping = resolve_mapping_byfile(inferior->inject_lib->path, inferior->mappings, true)) == NULL)
     {
         return false;
     }
 
     active_hook_t* hook = inferior->hooks;
-    
+    /* Rebase all the hooks */ 
     while(hook)
     {
         hook->hook_address += (size_t)lib_mapping->lower_bound;
@@ -136,6 +136,8 @@ inferior_t* do_hook_dynamic(opts_t* opts, elf_file_t* target, elf_file_t* inject
     
     inferior_t* inferior = create_inferior(opts, target, inject_lib);
     
+    inferior_load_elf(inferior);
+
     return inferior;
 }
 
@@ -153,8 +155,8 @@ void do_hook_loop(inferior_t* inferior)
     ptrace(PTRACE_SETOPTIONS, inferior->pid, NULL, PTRACE_O_TRACEEXEC);
     while(true)
     {
+        /* Wait for a signal/trap */
         waitpid(inferior->pid, &status, 0); 
-        
         
         if(!WIFSTOPPED(status) || WSTOPSIG(status) != SIGTRAP)
         {
@@ -179,6 +181,14 @@ void do_hook_loop(inferior_t* inferior)
                     WCOREDUMP(status)?" (core dumped)":"");
                 exit(1);
             }
+            else if(WIFSTOPPED(status))
+            {
+                printf("<PHOOK>: Stopped by signal %d (%s)\n",
+                        WSTOPSIG(status),
+                        strsignal(WSTOPSIG(status)));
+                exit(1);
+                        
+            }
             else
             {
                 printf("<PHOOK>: Unknown status %d received..\n", status);
@@ -195,6 +205,17 @@ void do_hook_loop(inferior_t* inferior)
             }
         }   
         
+
+        
+        /* Handler for ptrace specific events */
+        int ptrace_status = (status >> 16);
+        switch(ptrace_status)
+        {
+            case PTRACE_EVENT_EXIT:
+                printf("<PHOOK>: Process gracefully exited (EVENT_EXIT).\n");
+                exit(1);
+        }
+
         /* reset the counter */
         n_unknown = 0;
 
@@ -393,7 +414,10 @@ void start_hook(opts_t* opts)
     apply_hooks(inferior, opts->hooks);
     
 
-    ptrace(PTRACE_O_TRACEEXIT, inferior->pid, NULL, NULL);    
+    ptrace(PTRACE_SETOPTIONS, inferior->pid, NULL, PTRACE_O_TRACEEXIT);  
+
+
+    /* Now that the hooks have been applied, we're ready to start actual execution */
     ptrace(PTRACE_CONT, inferior->pid, NULL, NULL);
   
     do_hook_loop(inferior);

@@ -458,8 +458,6 @@ uint64_t ptrace_execute_syscall(pid_t pid, const uint8_t* shellcode, size_t n)
     
     uint64_t return_value = ptrace_get_reg_u64(pid, RAX);
     
-    struct user_aregs_struct* state2 = ptrace_get_aregs(pid);
-
     ptrace_set_aregs(pid, state);
 
     free(state);

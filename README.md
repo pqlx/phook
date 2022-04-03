@@ -2,6 +2,7 @@
 
 `phook` attempts to provide an easy-to-use ptrace-backed function hooking solution for x86_64 linux. 
 
+You probably shouldn't use this. Use [frida](https://frida.re) instead, as it is a thousand times more mature than this. I wrote phook as an experiment to see how easy binary instrumentation would be with ptrace.
 ## Function hooking
 
 Function hooking is the act of intercepting function calls and running alternative code instead of or before the existing function. 
